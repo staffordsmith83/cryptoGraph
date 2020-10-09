@@ -3,6 +3,30 @@ import DSAGraphs_modified
 from linkedLists import *
 from adts_LLversion import *
 
+class Menu:
+    def __init__(self, title, instructions=''):
+        self.title = title
+        self.instructions = instructions
+        self.items = DSALinkedList()
+        self.count = 0
+
+    def addItem(self, menuItem):
+        self.items.insertLast(menuItem)
+        self.count += 1
+
+    def display(self):
+        print('\n__________________________________')
+        print(self.title)
+        print(self.instructions)
+        for number, menuItem in enumerate(self.items):
+            print(number, menuItem.name)
+
+
+class MenuItem:
+    def __init__(self, name, action):
+        self.name = name
+        self.action = action
+
 
 class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
     """Inherits from DSAGraph implementation developed by Stafford Smith for Practical 6,
@@ -60,18 +84,31 @@ class BinanceTradingData:
         return validTrades
 
 
+def loadData(binanceDataObject):
+
+    validTrades = binanceDataObject.createSkeletonGraph()
+    validTrades.loadEdgeWeightsFromBinance(binanceDataObject)
 
 if __name__ == "__main__":
+    # setup, should I just put this in init?
     latestBinanceData = BinanceTradingData()
-    latestBinanceData.displayTradeDetails(tradeIdx=1)
 
-    validTrades = latestBinanceData.createSkeletonGraph()
-    # BinanceTradingData.pushEdgeWeightsToSkeleton(validTrades)
-    validTrades.loadEdgeWeightsFromBinance(latestBinanceData)
+    # setup the menu
+    mainMenu = Menu(title='Welcome to cryptoGraph', instructions='Please select an operation:')
+    mainMenu.addItem(MenuItem(name='Blank', action=None))
+    mainMenu.addItem(MenuItem(name='Load Trade Data', action=loadData(latestBinanceData)))
+    mainMenu.addItem(MenuItem(name='Display Trade Details', action=latestBinanceData.displayTradeDetails(tradeIdx=1)))
 
-    # validTrades.displayAsMatrix()
+    # show the menu
+    mainMenu.display()
 
-    print(validTrades.verticesCount)
-    print(validTrades.edgeCount)
+    # TODO NEXT: user input and then execute actions from menu
 
-    validTrades.displayEdges()
+
+    #
+    # # validTrades.displayAsMatrix()
+    #
+    # print(validTrades.verticesCount)
+    # print(validTrades.edgeCount)
+    #
+    # validTrades.displayEdges()
