@@ -7,18 +7,21 @@ from adts_LLversion import *
 class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
     """Inherits from DSAGraph implementation developed by Stafford Smith for Practical 6,
     Data Structures and Algorithms unit, Curtin University, 2020.
-    Changes are edge weights are now implemented, to store the exchange rates between
-    cryptocurrencies"""
-    ...
+    This subclass adds a method to load edge weights from Binance trading data,
+    the edge weights are a float datatype, that hold the average trading price from the last 24 hours."""
 
+    def loadEdgeWeightsFromBinance(self, binanceDataObject):
+        with open(binanceDataObject.trades_filepath) as json_file:
+            trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
 
-class CryptoGraphVertex(DSAGraphs_modified.DSAGraphVertex):
-    """Inherits from DSAGraphVertex implementation developed by Stafford Smith for Practical 6,
-    Data Structures and Algorithms unit, Curtin University, 2020"""
-    ...
-    # TODO cant find a way to change the implementation of GraphVertex from outside of the class.
-    # DSADirecitonalGraph calls DSAGrashVertex, we need it to call our modified CryptoGraphVertex instead...
-    # for now rewrite.
+            for e in self._edges:
+                # symbol = e.fromVertex._label + e.toVertex._label
+                symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
+
+                for t in trades:
+                    if t['symbol'] == symbol:
+                        # set the weight!
+                        e.weight = t['weightedAvgPrice']
 
 
 class BinanceTradingData:
@@ -46,7 +49,7 @@ class BinanceTradingData:
         with open(self.exchangeInfo_filepath) as json_file:
             ei = json.load(json_file)
 
-        validTrades = DSAGraphs_modified.DSAGraphWithEdges()
+        validTrades = CryptoGraph()
         for symbol in ei['symbols']:
 
             if symbol["isSpotTradingAllowed"] is True:
@@ -56,18 +59,6 @@ class BinanceTradingData:
 
         return validTrades
 
-    #TODO: rewrite as a member of the graph class
-    def pushEdgeWeightsToSkeleton(self, skeleton):
-        with open(self.trades_filepath) as json_file:
-            trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
-
-            for e in skeleton._edges:
-                symbol = e.fromVertex._label + e.toVertex._label
-
-                for t in trades:
-                    if t.symbol == symbol:
-                        # set the weight!
-                        e.weight = t.weightedAveragePrice
 
 
 if __name__ == "__main__":
@@ -76,7 +67,7 @@ if __name__ == "__main__":
 
     validTrades = latestBinanceData.createSkeletonGraph()
     # BinanceTradingData.pushEdgeWeightsToSkeleton(validTrades)
-    validTrades.getEdgeWeightsFromBinance(latestBinanceData)
+    validTrades.loadEdgeWeightsFromBinance(latestBinanceData)
 
     # validTrades.displayAsMatrix()
 

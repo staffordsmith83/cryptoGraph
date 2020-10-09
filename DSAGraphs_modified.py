@@ -1,6 +1,8 @@
 from linkedLists import *
 from adts_LLversion import *
 import json
+from copy import deepcopy
+
 
 class DSAGraphVertex:
 
@@ -10,14 +12,12 @@ class DSAGraphVertex:
         # self._edges = DSALinkedList() #edges keep track of links
         self._visited = False
 
-    # def addEdge(self, vertex, attributes):
-    #     self._links.insertLast(vertex)
-
     def setVisited(self):
         self._visited = True
 
     def clearVisited(self):
         self._visited = False
+
 
 class DSAGraphEdge:
     def __init__(self, fromVertex, toVertex, weight=0.0):
@@ -26,13 +26,12 @@ class DSAGraphEdge:
         self.weight = weight
 
 
-
 class DSAGraphWithEdges:
     """Non-directional graph. When adding an edge we add a reference in the links of both vertices"""
 
     def __init__(self):
         self._vertices = DSALinkedList()  # start with an empty list when first constructed
-        self._edges = DSALinkedList()   # empty linked list for the edges too
+        self._edges = DSALinkedList()  # empty linked list for the edges too
         self.edgeCount = 0
         self.verticesCount = 0
 
@@ -62,18 +61,10 @@ class DSAGraphWithEdges:
 
         if self.hasVertex(label2) is False:
             self.addVertex(label2)
-        #
-        # # Get the vertex objects, so that we can update their links
-        # vertex1 = self.getVertex(label1)
-        # vertex2 = self.getVertex(label2)
-        #
-        # # For undirected graph, add links to both vertices:
-        # vertex1.addEdge(vertex2)
-        # vertex2.addEdge(vertex1)
-        #
+
         newEdge = DSAGraphEdge(label1, label2, weight)
         self._edges.insertLast(newEdge)
-        
+
         self.edgeCount += 1
 
     def getEdge(self, fromVertex, toVertex):
@@ -87,19 +78,6 @@ class DSAGraphWithEdges:
 
         return result
 
-    def getEdgeWeightsFromBinance(self, binanceDataObject):
-        with open(binanceDataObject.trades_filepath) as json_file:
-            trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
-
-            for e in self._edges:
-                # symbol = e.fromVertex._label + e.toVertex._label
-                symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
-
-                for t in trades:
-                    if t['symbol'] == symbol:
-                        # set the weight!
-                        e.weight = t['weightedAvgPrice']
-
     def hasVertex(self, label):
         result = False
         for i in self._vertices:
@@ -109,8 +87,10 @@ class DSAGraphWithEdges:
         return result
 
     def getAdjacent(self, label):
+        """Implementation changed with edge version of graph data structure.
+        This may need renaming because this graph is now directional..."""
         adjacency_list = DSALinkedList()
-        
+
         vertex = self.getVertex(label)
         if vertex is None:
             raise ValueError(f'There is no vertex with label {label}')
@@ -119,9 +99,11 @@ class DSAGraphWithEdges:
             for e in self._edges:
                 if e.fromVertex == label:
                     adjacency_list.insertLast(self.getVertex(e.toVertex))
-                    
+
+        return adjacency_list
 
     def isAdjacent(self, label1, label2):
+        """This is directional"""
         result = False
         try:
             neighbours = self.getAdjacent(label1)
@@ -137,12 +119,19 @@ class DSAGraphWithEdges:
     def displayAsList(self):
         for v in self._vertices:
             print(f'{v._label}', end=", ")
+        print('\n')
 
     def displayAsMatrix(self):
-        for v in self._vertices:
-            print(f'\n{v._label}:', end="")
-            for n in v._links:
-                print(f'{n._label}, ', end="")
+        """Not working... Stops printing the vertices after first one...had to use deepcopy...
+        Maybe a problem with the iterator implementation in my LinkedLists class?"""
+        vertices = deepcopy(self._vertices)
+        for v in vertices:
+            print(f'\n{v._label}:', end=" ")
+            adjList = self.getAdjacent(v._label)
+
+            for n in adjList:
+                print(f'{n._label}', end=", ")
+
         print('\n')
 
     def displayEdges(self):
@@ -173,9 +162,9 @@ class DSAGraphWithEdges:
 
             # while v has another vertex in its links to look at:
             v = s.top()
-            if any(link._visited is False for link in v._links):
+            if any(link._visited is False for link in self.getAdjacent(v._label)):
 
-                for w in v._links:
+                for w in self.getAdjacent(v._label):
 
                     if not w._visited:
                         t.enqueue(w)
@@ -213,9 +202,9 @@ class DSAGraphWithEdges:
 
             # while v has another vertex in its links to look at:
             v = s.dequeue()
-            # while any(link._visited is False for link in v._links):  # can this be made more efficient?
+            # while any(link._visited is False for link in self.getAdjacent(v._label)):  # can this be made more efficient?
 
-            for w in v._links:
+            for w in self.getAdjacent(v._label):
 
                 if not w._visited:
                     t.enqueue(w)  # the output queue
@@ -242,26 +231,24 @@ class DSAGraphWithEdges:
                 self.addEdge(label1, label2)
 
 
-
 if __name__ == "__main__":
     g = DSAGraphWithEdges()
     # g = DSAGraphWithEdges()
 
-
-    testfile = 'prac6_sorted_order.al'
+    testfile = 'test_vertices.al'
     g.readFromCsv(testfile)
 
-    # print(g.isAdjacent('A', 'B'))
+    print(g.isAdjacent('G', 'F'))
 
+    print('Our Graph as a list of vertices: ')
     # g.displayAsList()
+
     print('Our Graph as an adjacency matrix: ')
     g.displayAsMatrix()
 
     print('Running Depth First Search')
     dfs = g.searchDepthFirst()
     g.displayQueueLabels(dfs)
-
-    g.displayAsMatrix()
 
     print('Running Breadth First Search')
     bfs = g.searchBreadthFirst()
