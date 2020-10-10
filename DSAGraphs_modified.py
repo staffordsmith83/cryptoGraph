@@ -24,6 +24,21 @@ class DSAGraphEdge:
         self.fromVertex = fromVertex
         self.toVertex = toVertex
         self.weight = weight
+        self._visited = False
+
+    def setVisited(self):
+        self._visited = True
+
+    def clearVisited(self):
+        self._visited = False
+
+
+def displayQueueLabels(queue):
+    """Intended to be used in conjunction with the search functions that return a queue of vertices."""
+
+    while not queue.isEmpty():
+        v = queue.dequeue()
+        print(v._label)
 
 
 class DSAGraphWithEdges:
@@ -216,13 +231,6 @@ class DSAGraphWithEdges:
 
         return t
 
-    def displayQueueLabels(self, queue):
-        """Intended to be used in conjunction with the search functions that return a queue of vertices."""
-
-        while not queue.isEmpty():
-            v = queue.dequeue()
-            print(v._label)
-
     def readFromCsv(self, filepath):
         with open(filepath, 'r') as myCsv:
             for item in myCsv.readlines():
@@ -248,8 +256,8 @@ if __name__ == "__main__":
 
     print('Running Depth First Search')
     dfs = g.searchDepthFirst()
-    g.displayQueueLabels(dfs)
+    displayQueueLabels(dfs)
 
     print('Running Breadth First Search')
     bfs = g.searchBreadthFirst()
-    g.displayQueueLabels(bfs)
+    displayQueueLabels(bfs)

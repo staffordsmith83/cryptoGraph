@@ -4,6 +4,7 @@ from linkedLists import *
 from adts_LLversion import *
 import sys
 
+
 class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
     """Inherits from DSAGraph implementation developed by Stafford Smith for Practical 6,
     Data Structures and Algorithms unit, Curtin University, 2020.
@@ -23,40 +24,132 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
                         # set the weight!
                         e.weight = t['weightedAvgPrice']
 
-    def findPaths(self, start, end, path=[]):
-        # TODO: remove python list and use my LinkedList data container
-        # TODO: add edge weights as a total
-        path = path + [start]
-        if start == end:
-            return [path]
-        if not self.hasVertex(start):
-            return []
-        paths = []
-        for node in self.getAdjacent(start):
-            if node._label not in path:
-                newpaths = self.findPaths(node._label, end, path)
-                for newpath in newpaths:
-                    print(newpath)
-                    paths.append(newpath)
-        return paths
-        
-    def findPathsLL(self, start, end, path=DSALinkedList()):
-        """Build a list of symbols instead"""
-        path.insertLast(start)
-        if start == end:
-            return path
-        if not self.hasVertex(start):
-            return None
-        paths = DSALinkedList()
-        for node in self.getAdjacent(start):
-            if not path.contains(node._label):
-                newpaths = self.findPathsLL(node._label, end, path=path)
-                for newpath in newpaths:
-                    # print(newpath)
-                    paths.insertLast(newpath)
-        # TODO: paths should be a llist or llists. We should be inserting the hole llist object at the end...
-        # why is it returning a single level list?
-        return paths
+    # def findPaths(self, start, end, path=[]):
+    #     # TODO: remove python list and use my LinkedList data container
+    #     # TODO: add edge weights as a total
+    #     path = path + [start]
+    #     if start == end:
+    #         return [path]
+    #     if not self.hasVertex(start):
+    #         return []
+    #     paths = []
+    #     for node in self.getAdjacent(start):
+    #         if node._label not in path:
+    #             newpaths = self.findPaths(node._label, end, path)
+    #             for newpath in newpaths:
+    #                 print(newpath)
+    #                 paths.append(newpath)
+    #     return paths
+    #
+
+    def getAllPaths(self, startNode, endNode, path=DSALinkedList()):
+        u = self.getVertex(startNode)
+        d = self.getVertex(endNode)
+
+        for v in self._vertices:
+            v.clearVisited()
+
+        self.getAllPathsRec(u, d, path)
+
+    def getAllPathsRec(self, u, d, path):
+        u.setVisited()
+        path.insertLast(u)
+
+        if u._label == d._label:
+            for i in path:
+                print(i._label, end='>')
+            print('\n')
+        else:
+            for i in self.getAdjacent(u._label):  # get adjacent takes the label
+
+                if not i._visited:
+                    self.getAllPathsRec(i, d, path)
+
+        path.removeLast()
+        u.clearVisited()
+
+
+    def targetedBreadthSearch(self, startNode, endNode):
+        """NB This returns a queue of objects."""
+        # mark all vertices as unvisited
+        vertices = self._vertices
+        for v in vertices:
+            v.clearVisited()
+
+        # establish our output container
+        t = Queue()
+
+        # pick one of the vertices to start with
+        v = self.getVertex(startNode)
+        e = self.getVertex(endNode)
+        # mark the source node as visited and enqueue it
+        t.enqueue(v)
+        v.setVisited()
+
+        # make a traversal queue that loads up items to check
+        q = Queue()
+        q.enqueue(v)
+
+        # while the queue is not empty:
+        while not q.isEmpty():
+            # while v has another vertex in its links to look at:
+            v = q.dequeue()
+
+            if v == e:
+                t.enqueue(v)
+                print('Found the end node')
+                return t
+
+            else:
+                for w in self.getAdjacent(v._label):
+                    if not w._visited:
+                        t.enqueue(w)  # the output queue
+                        w.setVisited()
+
+                        q.enqueue(w)
+
+        return t
+
+    def targetedDepthSearch(self, startNode):
+        """NB This returns a queue of objects."""
+        # mark all vertices as unvisited
+        vertices = self._vertices
+        for v in vertices:
+            v.clearVisited()
+
+        # establish the output container
+        t = Queue()
+
+        # pick one of the vertices to start with
+        v = self.getVertex(startNode)
+        # mark the source node as visited and enqueue it
+        t.enqueue(v)
+        v.setVisited()
+
+        # make a traversal stack of items to check
+        s = Stack()
+        s.push(v)
+
+        # while the stack is not empty:
+        while not s.isEmpty():
+
+            # while v has another vertex in its links to look at:
+            v = s.top()
+            if any(link._visited is False for link in self.getAdjacent(v._label)):
+
+                for w in self.getAdjacent(v._label):
+
+                    if not w._visited:
+                        t.enqueue(w)
+                        w.setVisited()
+
+                        s.push(w)
+                        v = w  # need to make the operation move to the links of w now
+                        break  # stop going through the links of v now and switch to the links of w
+
+            else:
+                v = s.pop()  # only pop when we have gone through all items in that item.
+        return t
 
 
 class BinanceTradingData:
@@ -158,17 +251,16 @@ def runInteractiveMenu():
             toAsset = input('Please specify the To Asset for your trade path:')
             validTrades = binanceData.createSkeletonGraph()
             validTrades.loadEdgeWeightsFromBinance(binanceData)
-            allPaths = validTrades.findPaths(fromAsset, toAsset)
+            allPaths = validTrades.findPathsLL(fromAsset, toAsset)
 
             for path in allPaths:
                 print(path)
             print('\n________________________\n'
-                  f'There are {len(allPaths)} possible trade paths for this trade.') # no len for LL
+                  f'There are {len(allPaths)} possible trade paths for this trade.')  # no len for LL
         elif user_choice == '4':
             print('Do Something')
         else:
             print('I dont understand your user_choice.')
-
 
 
 def runReportMode():
@@ -193,18 +285,6 @@ if __name__ == "__main__":
     else:
         print('Incorrect number of arguments, refer to usage:')
         displayUsage()
-
-
-
-
-
-
-
-
-
-
-
-
 
     # TODO NEXT: user input and then execute actions from menu
 
