@@ -111,6 +111,15 @@ class DSALinkedList:
             self.cur = self.cur.next
         return curval
 
+    def contains(self, searchValue):
+        """Added this method 10/10/2020, useful when using this data structure for other purposes e.g. cryptoGraph"""
+        result = False
+        for i in self:
+            if i == searchValue:
+                result = True
+                break
+
+        return result
 
 class DSALinkedListDE:
     """Doubly Ended linked list implementation. added another instance attribute self.tail.
