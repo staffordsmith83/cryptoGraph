@@ -36,6 +36,7 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
             if node._label not in path:
                 newpaths = self.findPaths(node._label, end, path)
                 for newpath in newpaths:
+                    print(newpath)
                     paths.append(newpath)
         return paths
         
@@ -49,8 +50,9 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
         paths = DSALinkedList()
         for node in self.getAdjacent(start):
             if not path.contains(node._label):
-                newpaths = self.findPathsLL(node._label, end, path)
+                newpaths = self.findPathsLL(node._label, end, path=path)
                 for newpath in newpaths:
+                    # print(newpath)
                     paths.insertLast(newpath)
         # TODO: paths should be a llist or llists. We should be inserting the hole llist object at the end...
         # why is it returning a single level list?
@@ -156,11 +158,12 @@ def runInteractiveMenu():
             toAsset = input('Please specify the To Asset for your trade path:')
             validTrades = binanceData.createSkeletonGraph()
             validTrades.loadEdgeWeightsFromBinance(binanceData)
-            allPaths = validTrades.findPathsLL(fromAsset, toAsset)
+            allPaths = validTrades.findPaths(fromAsset, toAsset)
+
             for path in allPaths:
                 print(path)
-            # print('\n________________________\n'
-            #       f'There are {len(allPaths)} possible trade paths for this trade.') # no len for LL
+            print('\n________________________\n'
+                  f'There are {len(allPaths)} possible trade paths for this trade.') # no len for LL
         elif user_choice == '4':
             print('Do Something')
         else:
