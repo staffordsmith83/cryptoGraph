@@ -8,220 +8,6 @@ import requests         # for web requests extended functionality only
 import copy
 
 
-
-class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
-    """Inherits from DSAGraph implementation developed by Stafford Smith for Practical 6,
-    Data Structures and Algorithms unit, Curtin University, 2020.
-    This subclass adds a method to load edge weights from Binance trading data,
-    the edge weights are a float datatype, that hold the average trading price from the last 24 hours."""
-
-
-    def loadEdgeWeightsFrom24hr(self, binanceDataObject):
-        with open(binanceDataObject.trades_24hr_filepath) as json_file:
-            trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
-
-            for e in self._edges:
-                # symbol = e.fromVertex._label + e.toVertex._label
-                symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
-
-                for t in trades:
-                    if t['symbol'] == symbol:
-                        # set the weight!
-                        e.weight = t['weightedAvgPrice']
-
-                # e.weight = self.getSymbolPrice(symbol)
-
-    def loadEdgeWeightsFromCurrent(self, binanceDataObject):
-        prices = self.getAllSymbolPrices()
-
-        for e in self._edges:
-            # symbol = e.fromVertex._label + e.toVertex._label
-            symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
-
-            for t in prices:
-                if t['symbol'] == symbol:
-                    # set the weight!
-                    e.weight = t['price']
-
-
-    def getSymbolPrice(self, symbol):
-        """Takes a trade symbol as a string, and performs a GET request.
-        Return the current trade price as a float"""
-        baseUrl = 'https://api.binance.com/api/v3/ticker/price?symbol='
-        requestUrl = baseUrl + symbol
-        resp = requests.get(requestUrl)
-        if resp.status_code != 200:
-            # This means something went wrong.
-            raise ValueError
-        return float(resp.json()['price'])
-
-    def getAllSymbolPrices(self):
-        """Returns all current trade prices"""
-        requestUrl = 'https://api.binance.com/api/v3/ticker/price'
-        resp = requests.get(requestUrl)
-        if resp.status_code != 200:
-            # This means something went wrong.
-            raise ValueError
-        return resp.json()
-
-
-    def getAllPaths(self, startNode, endNode, path=DSALinkedList()):
-
-        try:
-            u = self.getVertex(startNode)
-            d = self.getVertex(endNode)
-
-            for v in self._vertices:
-                v.clearVisited()
-
-            self.getAllPathsRec(u, d, path)
-
-            print('Found all Paths')
-
-        except ValueError as ve:
-            print('One of those assets does not exist')
-
-
-
-    def getAllPathsRec(self, u, d, path):
-        # TODO: implement without using deepcopy
-        u.setVisited()
-        path.insertLast(u)
-
-        if u._label == d._label:                # if we have got to the destination vertex
-            completePath = copy.deepcopy(path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
-            self.tempPaths.append(completePath)    # add this complete path to the self.tempPaths attribute NOT WORKING
-            self.displayPathEdges(path)
-        else:
-            for i in self.getAdjacent(u._label):  # get adjacent takes the label
-
-                if not i._visited:
-                    self.getAllPathsRec(i, d, path)
-
-        path.removeLast()
-        u.clearVisited()
-
-    def displayPathEdges(self, path):
-        commission = 0.001
-        pathstring = ''
-        pathcost = 1
-        fromLabel = None # the first toLabel will be the label of the head
-        toLabel = path.head.value._label
-        for i in path:
-
-            if fromLabel is None:
-                # print('this is the first node, moving to the next one in the list to get the first edge')
-                fromLabel = toLabel #increment so that the from Label is now the first list item
-                pathstring = i._label
-            else:
-                pathstring = f'{pathstring} > {i._label}'
-                fromLabel = toLabel
-                toLabel = i._label
-                cost = float(self.getEdgeValue(fromLabel, i._label))
-                if cost == 0.0:
-                    print('Be careful, no edge weight recorded for this trade')
-                    cost = 1.0
-
-                pathcost = pathcost * cost
-                pathcost = pathcost - pathcost * commission     # ignore commission for now
-
-
-        print(f'{pathstring} cost = {pathcost}')
-
-        print('\n')
-
-    def getEdgeValue(self, fromVertex, toVertex, attribute='weight'):
-
-        e = self.getEdge(fromVertex, toVertex)
-        if attribute == 'weight':
-            return e.weight
-
-    def targetedBreadthSearch(self, startNode, endNode):
-        """NB This returns a queue of objects."""
-        # mark all vertices as unvisited
-        vertices = self._vertices
-        for v in vertices:
-            v.clearVisited()
-
-        # establish our output container
-        t = Queue()
-
-        # pick one of the vertices to start with
-        v = self.getVertex(startNode)
-        e = self.getVertex(endNode)
-        # mark the source node as visited and enqueue it
-        t.enqueue(v)
-        v.setVisited()
-
-        # make a traversal queue that loads up items to check
-        q = Queue()
-        q.enqueue(v)
-
-        # while the queue is not empty:
-        while not q.isEmpty():
-            # while v has another vertex in its links to look at:
-            v = q.dequeue()
-
-            if v == e:
-                t.enqueue(v)
-                print('Found the end node')
-                return t
-
-            else:
-                for w in self.getAdjacent(v._label):
-                    if not w._visited:
-                        t.enqueue(w)  # the output queue
-                        w.setVisited()
-
-                        q.enqueue(w)
-
-        return t
-
-    def targetedDepthSearch(self, startNode):
-        """NB This returns a queue of objects."""
-        # mark all vertices as unvisited
-        vertices = self._vertices
-        for v in vertices:
-            v.clearVisited()
-
-        # establish the output container
-        t = Queue()
-
-        # pick one of the vertices to start with
-        v = self.getVertex(startNode)
-        # mark the source node as visited and enqueue it
-        t.enqueue(v)
-        v.setVisited()
-
-        # make a traversal stack of items to check
-        s = Stack()
-        s.push(v)
-
-        # while the stack is not empty:
-        while not s.isEmpty():
-
-            # while v has another vertex in its links to look at:
-            v = s.top()
-            if any(link._visited is False for link in self.getAdjacent(v._label)):
-
-                for w in self.getAdjacent(v._label):
-
-                    if not w._visited:
-                        t.enqueue(w)
-                        w.setVisited()
-
-                        s.push(w)
-                        v = w  # need to make the operation move to the links of w now
-                        break  # stop going through the links of v now and switch to the links of w
-
-            else:
-                v = s.pop()  # only pop when we have gone through all items in that item.
-        return t
-
-    def __repr__(self):
-        return f'Cryptograph with {self.edgeCount} edges, and {self.verticesCount} vertices'
-
-
 class BinanceTradingData:
     """Object that takes json data from Binance.com and creates an up to date snapshot
     of trading prices from the website.
@@ -294,6 +80,140 @@ class BinanceTradingData:
         return assetPossibleTrades
 
 
+class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
+    """Inherits from DSAGraph implementation developed by Stafford Smith for Practical 6,
+    Data Structures and Algorithms unit, Curtin University, 2020.
+    This subclass adds a method to load edge weights from Binance trading data,
+    the edge weights are a float datatype, that hold the average trading price from the last 24 hours."""
+
+
+    def loadEdgeWeightsFrom24hr(self, binanceDataObject):
+        with open(binanceDataObject.trades_24hr_filepath) as json_file:
+            trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
+
+            for e in self._edges:
+                # symbol = e.fromVertex._label + e.toVertex._label
+                symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
+
+                for t in trades:
+                    if t['symbol'] == symbol:
+                        # set the weight!
+                        e.weight = t['weightedAvgPrice']
+
+                # e.weight = self.getSymbolPrice(symbol)
+
+    def loadEdgeWeightsFromCurrent(self, binanceDataObject):
+        prices = self.getAllSymbolPrices()
+
+        for e in self._edges:
+            # symbol = e.fromVertex._label + e.toVertex._label
+            symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
+
+            for t in prices:
+                if t['symbol'] == symbol:
+                    # set the weight!
+                    e.weight = t['price']
+
+
+    def getSymbolPrice(self, symbol):
+        """Takes a trade symbol as a string, and performs a GET request.
+        Return the current trade price as a float"""
+        baseUrl = 'https://api.binance.com/api/v3/ticker/price?symbol='
+        requestUrl = baseUrl + symbol
+        resp = requests.get(requestUrl)
+        if resp.status_code != 200:
+            # This means something went wrong.
+            raise ValueError
+        return float(resp.json()['price'])
+
+    def getAllSymbolPrices(self):
+        """Returns all current trade prices"""
+        requestUrl = 'https://api.binance.com/api/v3/ticker/price'
+        resp = requests.get(requestUrl)
+        if resp.status_code != 200:
+            # This means something went wrong.
+            raise ValueError
+        return resp.json()
+
+
+    def getAllPaths(self, startNode, endNode):
+        path = TradePath()
+
+        try:
+            u = self.getVertex(startNode)
+            d = self.getVertex(endNode)
+
+            for v in self._vertices:
+                v.clearVisited()
+
+            self.getAllPathsRec(u, d, path)
+
+            print('Found all Paths')
+
+        except ValueError as ve:
+            print('One of those assets does not exist')
+
+    def getAllPathsRec(self, u, d, path):
+        # TODO: implement without using deepcopy
+        u.setVisited()
+        path.insertLast(u)
+
+        if u._label == d._label:                # if we have got to the destination vertex
+            completePath = copy.deepcopy(path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
+            self.tempPaths.append(completePath)    # add this complete path to the self.tempPaths attribute NOT WORKING
+            self.displayPathEdges(path)
+        else:
+            for i in self.getAdjacent(u._label):  # get adjacent takes the label
+
+                if not i._visited:
+                    self.getAllPathsRec(i, d, path)
+
+        path.removeLast()
+        u.clearVisited()
+
+    def displayPathEdges(self, path):
+        commission = 0.001
+        pathstring = ''
+        pathcost = 1
+        fromLabel = None # the first toLabel will be the label of the head
+        toLabel = path.head.value._label
+        for i in path:
+
+            if fromLabel is None:
+                # print('this is the first node, moving to the next one in the list to get the first edge')
+                fromLabel = toLabel #increment so that the from Label is now the first list item
+                pathstring = i._label
+            else:
+                pathstring = f'{pathstring} > {i._label}'
+                fromLabel = toLabel
+                toLabel = i._label
+                cost = float(self.getEdgeValue(fromLabel, i._label))
+                if cost == 0.0:
+                    print('Be careful, no edge weight recorded for this trade')
+                    cost = 1.0
+
+                pathcost = pathcost * cost
+                pathcost = pathcost - pathcost * commission     # ignore commission for now
+
+
+        print(f'{pathstring} cost = {pathcost}')
+
+        print('\n')
+
+    def getEdgeValue(self, fromVertex, toVertex, attribute='weight'):
+
+        e = self.getEdge(fromVertex, toVertex)
+        if attribute == 'weight':
+            return e.weight
+
+    def __repr__(self):
+        return f'Cryptograph with {self.edgeCount} edges, and {self.verticesCount} vertices'
+
+class TradePath(DSALinkedListDE):
+    def __init__(self):
+        self.head = None
+        self.tail = None    # added for doubly-ended implementation
+        self.cost = 0
 
 def loadData(binanceDataObject):
     validTrades = binanceDataObject.createSkeletonGraph()

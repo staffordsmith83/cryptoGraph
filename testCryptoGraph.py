@@ -25,6 +25,7 @@ if __name__ == '__main__':
     # displayQueueLabels(z)
 
     validTrades.getAllPaths(fromAsset, toAsset)
-    print(validTrades.tempPaths)
+    for path in validTrades.tempPaths:
+        print(path.cost)
     # price = validTrades.getSymbolPrice('ETHBTC')
     # print(price)
