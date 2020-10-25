@@ -9,7 +9,7 @@ class DSAGraphVertex:
     def __init__(self, label, value=None):
         self._label = label
         self._value = value
-        # self._edges = DSALinkedList() #edges keep track of links
+        self._edges = DSALinkedList()
         self._visited = False
 
     def setVisited(self):
@@ -52,7 +52,8 @@ class DSAGraphWithEdges:
         self._edges = DSALinkedList()  # empty linked list for the edges too
         self.edgeCount = 0
         self.verticesCount = 0
-        self.tempPaths = DSALinkedList()  # added to hold found paths, not ever a complete set
+        # TODO: change back to LinkedList instead of builtin List
+        self.tempPaths = []    # for testing only, LinkedList was not working as a container...
 
     def addVertex(self, label):
         if self.hasVertex(label) is False:

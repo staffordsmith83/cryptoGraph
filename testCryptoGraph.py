@@ -13,7 +13,7 @@ if __name__ == '__main__':
     fromAsset = 'BTC'
     toAsset = 'ETH'
     validTrades = binanceData.createSkeletonGraph()
-    validTrades.loadEdgeWeightsFromBinance(binanceData)
+    validTrades.loadEdgeWeightsFromCurrent(binanceData)
     # allPaths = validTrades.findPathsLL(fromAsset, toAsset)
     # searchRes1 = validTrades.searchDepthFirst()
     # validTrades.displayQueueLabels(searchRes1)
@@ -25,3 +25,6 @@ if __name__ == '__main__':
     # displayQueueLabels(z)
 
     validTrades.getAllPaths(fromAsset, toAsset)
+    print(validTrades.tempPaths)
+    # price = validTrades.getSymbolPrice('ETHBTC')
+    # print(price)

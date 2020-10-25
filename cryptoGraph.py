@@ -3,6 +3,11 @@ import DSAGraphs_modified
 from linkedLists import *
 from adts_LLversion import *
 import sys
+import requests         # for web requests extended functionality only
+
+import copy
+
+
 
 class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
     """Inherits from DSAGraph implementation developed by Stafford Smith for Practical 6,
@@ -11,8 +16,8 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
     the edge weights are a float datatype, that hold the average trading price from the last 24 hours."""
 
 
-    def loadEdgeWeightsFromBinance(self, binanceDataObject):
-        with open(binanceDataObject.trades_filepath) as json_file:
+    def loadEdgeWeightsFrom24hr(self, binanceDataObject):
+        with open(binanceDataObject.trades_24hr_filepath) as json_file:
             trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
 
             for e in self._edges:
@@ -23,6 +28,41 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
                     if t['symbol'] == symbol:
                         # set the weight!
                         e.weight = t['weightedAvgPrice']
+
+                # e.weight = self.getSymbolPrice(symbol)
+
+    def loadEdgeWeightsFromCurrent(self, binanceDataObject):
+        prices = self.getAllSymbolPrices()
+
+        for e in self._edges:
+            # symbol = e.fromVertex._label + e.toVertex._label
+            symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
+
+            for t in prices:
+                if t['symbol'] == symbol:
+                    # set the weight!
+                    e.weight = t['price']
+
+
+    def getSymbolPrice(self, symbol):
+        """Takes a trade symbol as a string, and performs a GET request.
+        Return the current trade price as a float"""
+        baseUrl = 'https://api.binance.com/api/v3/ticker/price?symbol='
+        requestUrl = baseUrl + symbol
+        resp = requests.get(requestUrl)
+        if resp.status_code != 200:
+            # This means something went wrong.
+            raise ValueError
+        return float(resp.json()['price'])
+
+    def getAllSymbolPrices(self):
+        """Returns all current trade prices"""
+        requestUrl = 'https://api.binance.com/api/v3/ticker/price'
+        resp = requests.get(requestUrl)
+        if resp.status_code != 200:
+            # This means something went wrong.
+            raise ValueError
+        return resp.json()
 
 
     def getAllPaths(self, startNode, endNode, path=DSALinkedList()):
@@ -44,12 +84,13 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
 
 
     def getAllPathsRec(self, u, d, path):
-
+        # TODO: implement without using deepcopy
         u.setVisited()
         path.insertLast(u)
 
         if u._label == d._label:                # if we have got to the destination vertex
-            self.tempPaths.insertLast(path)     # add this complete path to the self.tempPaths attribute NOT WORKING
+            completePath = copy.deepcopy(path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
+            self.tempPaths.append(completePath)    # add this complete path to the self.tempPaths attribute NOT WORKING
             self.displayPathEdges(path)
         else:
             for i in self.getAdjacent(u._label):  # get adjacent takes the label
@@ -63,20 +104,27 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
     def displayPathEdges(self, path):
         commission = 0.001
         pathstring = ''
-        pathcost = 0
-        fromLabel = path.head.value._label  # the first toLabel will be the label of the head
+        pathcost = 1
+        fromLabel = None # the first toLabel will be the label of the head
+        toLabel = path.head.value._label
         for i in path:
 
-            pathstring = f'{pathstring} > {i._label}'
-            # if i == path.head:
-            #     ...
-            # else:
-            #     cost = self.getEdgeValue(fromLabel, i._label)
-            #
-            #     pathcost = pathcost * cost
-            #     pathcost = pathcost - pathcost * commission
-            #
-            #     fromLabel = i._label
+            if fromLabel is None:
+                # print('this is the first node, moving to the next one in the list to get the first edge')
+                fromLabel = toLabel #increment so that the from Label is now the first list item
+                pathstring = i._label
+            else:
+                pathstring = f'{pathstring} > {i._label}'
+                fromLabel = toLabel
+                toLabel = i._label
+                cost = float(self.getEdgeValue(fromLabel, i._label))
+                if cost == 0.0:
+                    print('Be careful, no edge weight recorded for this trade')
+                    cost = 1.0
+
+                pathcost = pathcost * cost
+                pathcost = pathcost - pathcost * commission     # ignore commission for now
+
 
         print(f'{pathstring} cost = {pathcost}')
 
@@ -183,13 +231,13 @@ class BinanceTradingData:
 
     def __init__(self):
         # TODO: implement get data from API to initialize
-        self.trades_filepath = 'binance_json/24hr.json'
+        self.trades_24hr_filepath = 'binance_json/24hr.json'
         self.exchangeInfo_filepath = 'binance_json/exchangeInfo.json'
 
     def displayAllTradeDetails(self, tradeIdx=1, symbol='BTCETH'):
         """as per 'find and display trade details' requirement
         TODO modify this to operate on symbol names"""
-        with open(self.trades_filepath) as json_file:
+        with open(self.trades_24hr_filepath) as json_file:
             trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
 
         for k, v in trades[tradeIdx].items():
@@ -198,7 +246,7 @@ class BinanceTradingData:
     def displayTradeDetails(self, symbol):
         """as per 'find and display trade details' requirement
         TODO modify this to operate on symbol names"""
-        with open(self.trades_filepath) as json_file:
+        with open(self.trades_24hr_filepath) as json_file:
             trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
 
             tradeCount = 0
@@ -245,18 +293,11 @@ class BinanceTradingData:
 
         return assetPossibleTrades
 
-class GraphPath(DSALinkedListDE):
-    """ Inherits from DSALInkedLists but adds an instance attribute of totalCost
-    Specialised to contain cryptoGraph edge objects"""
-    def __init__(self):
-        self.head = None
-        self.tail = None  # added for doubly-ended implementation
-        self.totalCost = 0
 
 
 def loadData(binanceDataObject):
     validTrades = binanceDataObject.createSkeletonGraph()
-    validTrades.loadEdgeWeightsFromBinance(binanceDataObject)
+    validTrades.loadEdgeWeightsFrom24hr(binanceDataObject)
 
 
 def displayUsage():
@@ -292,7 +333,8 @@ def runInteractiveMenu(binanceData=None):
             binanceData = BinanceTradingData()
             print('Building graph data structure')
             validTrades = binanceData.createSkeletonGraph()
-            validTrades.loadEdgeWeightsFromBinance(binanceData)
+            # validTrades.loadEdgeWeightsFrom24hr(binanceData)
+            validTrades.loadEdgeWeightsFromCurrent(binanceData)
         elif user_choice == '2':
             assetCode = input('Specify the asset code:')
             try:
@@ -337,7 +379,7 @@ def runInteractiveMenu(binanceData=None):
                     print(f'Asset {excludeAsset} removed from the Graph')
 
             # load the edge weights last so we're only doing it for the ones we need to
-            # validTrades.loadEdgeWeightsFromBinance(binanceData)
+            # validTrades.loadEdgeWeightsFrom24hr(binanceData)
 
 
 
