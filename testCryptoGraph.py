@@ -25,7 +25,10 @@ if __name__ == '__main__':
     # displayQueueLabels(z)
 
     pathContainer = validTrades.getAllPaths(fromAsset, toAsset)
+    pathContainer.sortByPrice()
     for path in pathContainer:
         print(f'{path.head.value._label}->{path.tail.value._label}: cost={path.cost}')
     # price = validTrades.getSymbolPrice('ETHBTC')
     # print(price)
+
+
