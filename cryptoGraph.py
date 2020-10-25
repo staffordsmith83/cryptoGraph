@@ -160,8 +160,14 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
 
         if u._label == d._label:                # if we have got to the destination vertex
             completePath = copy.deepcopy(path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
-            self.tempPaths.append(completePath)    # add this complete path to the self.tempPaths attribute NOT WORKING
-            self.displayPathEdges(path)
+            completePath.calculateTotalCost(self)
+            self.tempPaths.insertLast(completePath)    # add this complete path to the self.tempPaths attribute NOT WORKING
+            
+            # TODO: replace this with a method that calculates the path cost, and stores it in the object.
+            # TODO: Then retrieve the whole container, sort it by cost order, and print top 10 lowest cost paths.
+            # self.displayPathAndCost(path)
+
+
         else:
             for i in self.getAdjacent(u._label):  # get adjacent takes the label
 
@@ -171,7 +177,7 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
         path.removeLast()
         u.clearVisited()
 
-    def displayPathEdges(self, path):
+    def displayPathAndCost(self, path):
         commission = 0.001
         pathstring = ''
         pathcost = 1
@@ -214,6 +220,49 @@ class TradePath(DSALinkedListDE):
         self.head = None
         self.tail = None    # added for doubly-ended implementation
         self.cost = 0
+
+    def calculateTotalCost(self, tradeGraph):
+
+        commission = 0.001
+        # pathstring = ''
+        pathcost = 1
+        fromLabel = None  # the first toLabel will be the label of the head
+        toLabel = self.head.value._label
+        for i in self:
+
+            if fromLabel is None:
+                fromLabel = toLabel  # increment so that the from Label is now the first list item
+
+            else:
+                fromLabel = toLabel
+                toLabel = i._label
+                # TODO next line may be inefficient... are we searching all edges in the graph, or is it targeted?
+                cost = float(tradeGraph.getEdgeValue(fromLabel, i._label))
+                if cost == 0.0:
+                    raise ValueError('Be careful, no edge weight recorded for this trade')
+
+                pathcost = pathcost * cost
+                # pathcost = pathcost - pathcost * commission  # ignore commission for now
+
+        # Now set the self.cost attribute to be our calculated total cost!
+        self.cost = pathcost
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def loadData(binanceDataObject):
     validTrades = binanceDataObject.createSkeletonGraph()

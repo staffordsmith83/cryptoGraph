@@ -26,6 +26,6 @@ if __name__ == '__main__':
 
     validTrades.getAllPaths(fromAsset, toAsset)
     for path in validTrades.tempPaths:
-        print(path.cost)
+        print(f'{path.head.value._label}->{path.tail.value._label}: cost={path.cost}')
     # price = validTrades.getSymbolPrice('ETHBTC')
     # print(price)
