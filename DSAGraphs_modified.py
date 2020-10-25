@@ -53,8 +53,7 @@ class DSAGraphWithEdges:
         self._edges = DSALinkedList()  # empty linked list for the edges too
         self.edgeCount = 0
         self.verticesCount = 0
-        # TODO: change back to LinkedList instead of builtin List. Then make sortable with mergeSort
-        self.tempPaths = DSALinkedList()
+
 
     def addVertex(self, label):
         if self.hasVertex(label) is False:

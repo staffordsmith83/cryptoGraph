@@ -24,8 +24,8 @@ if __name__ == '__main__':
     # z = validTrades.targetedBreadthSearch(startNode='BTC', endNode='ETH')
     # displayQueueLabels(z)
 
-    validTrades.getAllPaths(fromAsset, toAsset)
-    for path in validTrades.tempPaths:
+    pathContainer = validTrades.getAllPaths(fromAsset, toAsset)
+    for path in pathContainer:
         print(f'{path.head.value._label}->{path.tail.value._label}: cost={path.cost}')
     # price = validTrades.getSymbolPrice('ETHBTC')
     # print(price)

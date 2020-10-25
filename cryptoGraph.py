@@ -4,6 +4,7 @@ from linkedLists import *
 from adts_LLversion import *
 import sys
 import requests         # for web requests extended functionality only
+from DSAsorts import *
 
 import copy
 
@@ -138,7 +139,7 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
 
     def getAllPaths(self, startNode, endNode):
         path = TradePath()
-
+        pathContainer = DSALinkedList()
         try:
             u = self.getVertex(startNode)
             d = self.getVertex(endNode)
@@ -146,14 +147,15 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
             for v in self._vertices:
                 v.clearVisited()
 
-            self.getAllPathsRec(u, d, path)
+            self.getAllPathsRec(u, d, path, pathContainer)
 
             print('Found all Paths')
+            return pathContainer
 
         except ValueError as ve:
             print('One of those assets does not exist')
 
-    def getAllPathsRec(self, u, d, path):
+    def getAllPathsRec(self, u, d, path, pathContainer):
         # TODO: implement without using deepcopy
         u.setVisited()
         path.insertLast(u)
@@ -161,7 +163,7 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
         if u._label == d._label:                # if we have got to the destination vertex
             completePath = copy.deepcopy(path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
             completePath.calculateTotalCost(self)
-            self.tempPaths.insertLast(completePath)    # add this complete path to the self.tempPaths attribute NOT WORKING
+            pathContainer.insertLast(completePath)    # add this complete path to the self.tempPaths attribute NOT WORKING
             
             # TODO: replace this with a method that calculates the path cost, and stores it in the object.
             # TODO: Then retrieve the whole container, sort it by cost order, and print top 10 lowest cost paths.
@@ -172,7 +174,7 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
             for i in self.getAdjacent(u._label):  # get adjacent takes the label
 
                 if not i._visited:
-                    self.getAllPathsRec(i, d, path)
+                    self.getAllPathsRec(i, d, path, pathContainer)
 
         path.removeLast()
         u.clearVisited()
