@@ -25,43 +25,7 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
                         e.weight = t['weightedAvgPrice']
 
 
-    def getAllPathEdges(self, startNode, endNode, weightAttribute='weight', path=DSALinkedList()):
-        """Calculates the cost along a path, using a specified weight attribute,
-        this is useful if the graph edges carry multiple pieces on information"""
-        # TODO: Calculate commission at the end, based on 0.001 * len(Path)
-
-        # try:
-        for e in self._edges:
-            e.clearVisited()
-
-        self.getAllPathEdgesRec(startNode, endNode, path)
-
-        # except ValueError as ve:
-        #     print('One of those assets does not exist')
-        #
-            
-    def getAllPathEdgesRec(self, u, d, path):
-
-        if u == d:                # if we have got to the destination vertex
-            self.tempPaths.insertLast(path)
-            print(path)                         # add this complete path to the self.tempPaths attribute
-
-        else:
-            for e in self.getAdjacentEdges(u):  # get adjacent takes the label
-
-                if not e._visited:
-                    path.insertLast(e)
-                    self.getAllPathEdgesRec(e.toVertex, d, path)
-
-        path.removeLast()
-        # e.clearVisited()
-
     def getAllPaths(self, startNode, endNode, path=DSALinkedList()):
-
-        ###########TODO: try implementing to find each edge and add it to a stack or queue,
-        # and then go though the stack of edges and just add up the weights.
-
-        # self.tempPaths = GraphPath()    # reinitialise the self.tempPaths container
 
         try:
             u = self.getVertex(startNode)
@@ -85,7 +49,7 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
         path.insertLast(u)
 
         if u._label == d._label:                # if we have got to the destination vertex
-            self.tempPaths.insertLast(path)     # add this complete path to the self.tempPaths attribute
+            self.tempPaths.insertLast(path)     # add this complete path to the self.tempPaths attribute NOT WORKING
             self.displayPathEdges(path)
         else:
             for i in self.getAdjacent(u._label):  # get adjacent takes the label
