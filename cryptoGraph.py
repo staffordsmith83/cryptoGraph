@@ -4,12 +4,12 @@ from linkedLists import *
 from adts_LLversion import *
 import sys
 
-
 class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
     """Inherits from DSAGraph implementation developed by Stafford Smith for Practical 6,
     Data Structures and Algorithms unit, Curtin University, 2020.
     This subclass adds a method to load edge weights from Binance trading data,
     the edge weights are a float datatype, that hold the average trading price from the last 24 hours."""
+
 
     def loadEdgeWeightsFromBinance(self, binanceDataObject):
         with open(binanceDataObject.trades_filepath) as json_file:
@@ -24,41 +24,69 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
                         # set the weight!
                         e.weight = t['weightedAvgPrice']
 
-    # def findPaths(self, start, end, path=[]):
-    #     # TODO: remove python list and use my LinkedList data container
-    #     # TODO: add edge weights as a total
-    #     path = path + [start]
-    #     if start == end:
-    #         return [path]
-    #     if not self.hasVertex(start):
-    #         return []
-    #     paths = []
-    #     for node in self.getAdjacent(start):
-    #         if node._label not in path:
-    #             newpaths = self.findPaths(node._label, end, path)
-    #             for newpath in newpaths:
-    #                 print(newpath)
-    #                 paths.append(newpath)
-    #     return paths
-    #
+
+    def getAllPathEdges(self, startNode, endNode, weightAttribute='weight', path=DSALinkedList()):
+        """Calculates the cost along a path, using a specified weight attribute,
+        this is useful if the graph edges carry multiple pieces on information"""
+        # TODO: Calculate commission at the end, based on 0.001 * len(Path)
+
+        # try:
+        for e in self._edges:
+            e.clearVisited()
+
+        self.getAllPathEdgesRec(startNode, endNode, path)
+
+        # except ValueError as ve:
+        #     print('One of those assets does not exist')
+        #
+            
+    def getAllPathEdgesRec(self, u, d, path):
+
+        if u == d:                # if we have got to the destination vertex
+            self.tempPaths.insertLast(path)
+            print(path)                         # add this complete path to the self.tempPaths attribute
+
+        else:
+            for e in self.getAdjacentEdges(u):  # get adjacent takes the label
+
+                if not e._visited:
+                    path.insertLast(e)
+                    self.getAllPathEdgesRec(e.toVertex, d, path)
+
+        path.removeLast()
+        # e.clearVisited()
 
     def getAllPaths(self, startNode, endNode, path=DSALinkedList()):
-        u = self.getVertex(startNode)
-        d = self.getVertex(endNode)
 
-        for v in self._vertices:
-            v.clearVisited()
+        ###########TODO: try implementing to find each edge and add it to a stack or queue,
+        # and then go though the stack of edges and just add up the weights.
 
-        self.getAllPathsRec(u, d, path)
+        # self.tempPaths = GraphPath()    # reinitialise the self.tempPaths container
+
+        try:
+            u = self.getVertex(startNode)
+            d = self.getVertex(endNode)
+
+            for v in self._vertices:
+                v.clearVisited()
+
+            self.getAllPathsRec(u, d, path)
+
+            print('Found all Paths')
+
+        except ValueError as ve:
+            print('One of those assets does not exist')
+
+
 
     def getAllPathsRec(self, u, d, path):
+
         u.setVisited()
         path.insertLast(u)
 
-        if u._label == d._label:
-            for i in path:
-                print(i._label, end='>')
-            print('\n')
+        if u._label == d._label:                # if we have got to the destination vertex
+            self.tempPaths.insertLast(path)     # add this complete path to the self.tempPaths attribute
+            self.displayPathEdges(path)
         else:
             for i in self.getAdjacent(u._label):  # get adjacent takes the label
 
@@ -68,6 +96,33 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
         path.removeLast()
         u.clearVisited()
 
+    def displayPathEdges(self, path):
+        commission = 0.001
+        pathstring = ''
+        pathcost = 0
+        fromLabel = path.head.value._label  # the first toLabel will be the label of the head
+        for i in path:
+
+            pathstring = f'{pathstring} > {i._label}'
+            # if i == path.head:
+            #     ...
+            # else:
+            #     cost = self.getEdgeValue(fromLabel, i._label)
+            #
+            #     pathcost = pathcost * cost
+            #     pathcost = pathcost - pathcost * commission
+            #
+            #     fromLabel = i._label
+
+        print(f'{pathstring} cost = {pathcost}')
+
+        print('\n')
+
+    def getEdgeValue(self, fromVertex, toVertex, attribute='weight'):
+
+        e = self.getEdge(fromVertex, toVertex)
+        if attribute == 'weight':
+            return e.weight
 
     def targetedBreadthSearch(self, startNode, endNode):
         """NB This returns a queue of objects."""
@@ -151,6 +206,9 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
                 v = s.pop()  # only pop when we have gone through all items in that item.
         return t
 
+    def __repr__(self):
+        return f'Cryptograph with {self.edgeCount} edges, and {self.verticesCount} vertices'
+
 
 class BinanceTradingData:
     """Object that takes json data from Binance.com and creates an up to date snapshot
@@ -164,7 +222,7 @@ class BinanceTradingData:
         self.trades_filepath = 'binance_json/24hr.json'
         self.exchangeInfo_filepath = 'binance_json/exchangeInfo.json'
 
-    def displayTradeDetails(self, tradeIdx=1, symbol='BTCETH'):
+    def displayAllTradeDetails(self, tradeIdx=1, symbol='BTCETH'):
         """as per 'find and display trade details' requirement
         TODO modify this to operate on symbol names"""
         with open(self.trades_filepath) as json_file:
@@ -172,6 +230,30 @@ class BinanceTradingData:
 
         for k, v in trades[tradeIdx].items():
             print(f'{k}: {v}')
+
+    def displayTradeDetails(self, symbol):
+        """as per 'find and display trade details' requirement
+        TODO modify this to operate on symbol names"""
+        with open(self.trades_filepath) as json_file:
+            trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
+
+            tradeCount = 0
+            for i in trades:
+                if i['symbol'] == symbol:
+                    tradeDetails = i
+                    tradeCount += 1
+
+        if tradeCount == 0:
+            raise IndexError('No trades for this symbol in the last 24 hours.')
+
+        else:
+            # print(f'In the last 24 hours there have been {tradeCount} trades for the trade {symbol}.'
+            #       f'The last recorded trade has the following information:')
+
+            for k, v in tradeDetails.items():
+                print(f'{k}: {v}')
+
+
 
     def createSkeletonGraph(self):
         with open(self.exchangeInfo_filepath) as json_file:
@@ -199,6 +281,14 @@ class BinanceTradingData:
 
         return assetPossibleTrades
 
+class GraphPath(DSALinkedListDE):
+    """ Inherits from DSALInkedLists but adds an instance attribute of totalCost
+    Specialised to contain cryptoGraph edge objects"""
+    def __init__(self):
+        self.head = None
+        self.tail = None  # added for doubly-ended implementation
+        self.totalCost = 0
+
 
 def loadData(binanceDataObject):
     validTrades = binanceDataObject.createSkeletonGraph()
@@ -217,7 +307,7 @@ def displayUsage():
     exit()
 
 
-def runInteractiveMenu():
+def runInteractiveMenu(binanceData=None):
     user_choice = '0'
     while not user_choice == '9':
         print('\n\nINTERACTIVE MODE MENU')
@@ -236,6 +326,9 @@ def runInteractiveMenu():
         if user_choice == '1':
             print('Loading latest Binance trading data from file')
             binanceData = BinanceTradingData()
+            print('Building graph data structure')
+            validTrades = binanceData.createSkeletonGraph()
+            validTrades.loadEdgeWeightsFromBinance(binanceData)
         elif user_choice == '2':
             assetCode = input('Specify the asset code:')
             try:
@@ -247,20 +340,51 @@ def runInteractiveMenu():
                 print(ule)
                 print("Please run the 'Load data' option from the menu first.")
         elif user_choice == '3':
+            fromAsset = input('Please specify the From Asset for your trade pair:')
+            toAsset = input('Please specify the To Asset for your trade pair:')
+            tradeSymbol = fromAsset + toAsset
+            try:
+                tradeDetails = binanceData.displayTradeDetails(symbol=tradeSymbol)
+
+            except IndexError as ie:
+                print(ie)
+
+        elif user_choice == '4':
             fromAsset = input('Please specify the From Asset for your trade path:')
             toAsset = input('Please specify the To Asset for your trade path:')
-            validTrades = binanceData.createSkeletonGraph()
-            validTrades.loadEdgeWeightsFromBinance(binanceData)
-            allPaths = validTrades.findPathsLL(fromAsset, toAsset)
+            # try:
+            validTrades.getAllPathEdges(fromAsset, toAsset)
+            print(validTrades.tempPaths)
+            # except UnboundLocalError as ule:
+            #     print(ule)
+            #     print("Please run the 'Load data' option from the menu first.")
 
-            for path in allPaths:
-                print(path)
-            print('\n________________________\n'
-                  f'There are {len(allPaths)} possible trade paths for this trade.')  # no len for LL
-        elif user_choice == '4':
-            print('Do Something')
+
+        elif user_choice == '5':
+            # Do not build valid trades everytime, or we lose previous exclusions!
+            # validTrades = binanceData.createSkeletonGraph()
+
+            excludeAsset = ' '
+            while not excludeAsset == '':
+                excludeAsset = input('Enter an Asset Code to remove it from the available options, hit return to finish:')
+
+                if validTrades.hasVertex(excludeAsset):
+                    validTrades.removeVertex(excludeAsset)
+                    print(f'Asset {excludeAsset} removed from the Graph')
+
+            # load the edge weights last so we're only doing it for the ones we need to
+            # validTrades.loadEdgeWeightsFromBinance(binanceData)
+
+
+
+
+
+
+
+
         else:
             print('I dont understand your user_choice.')
+
 
 
 def runReportMode():
@@ -286,12 +410,3 @@ if __name__ == "__main__":
         print('Incorrect number of arguments, refer to usage:')
         displayUsage()
 
-    # TODO NEXT: user input and then execute actions from menu
-
-    #
-    # # validTrades.displayAsMatrix()
-    #
-    # print(validTrades.verticesCount)
-    # print(validTrades.edgeCount)
-    #
-    # validTrades.displayEdges()

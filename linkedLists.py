@@ -8,6 +8,7 @@ class DSAListNode:
         self.previous = None
 
 
+
 class DSALinkedList:
 
     def __init__(self):
@@ -97,6 +98,35 @@ class DSALinkedList:
 
         return nodeValue
 
+
+    def contains(self, searchValue):
+        """Added this method 10/10/2020, useful when using this data structure for other purposes e.g. cryptoGraph"""
+
+        for i in self:
+            if i == searchValue:
+                return True
+
+        return False
+
+    def removeValue(self, value):
+        """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS"""
+        """Based on a method from https://www.pythoncentral.io/find-remove-node-linked-lists/"""
+        prev = None
+        curr = self.head
+        while curr:
+            if curr.value == value:
+                if prev:
+                    prev.next = curr.next
+                else:
+                    self.head = curr.next
+                return True
+
+            prev = curr
+            curr = curr.next
+
+        return False
+
+
     def __iter__(self):
 
         self.cur = self.head
@@ -111,14 +141,8 @@ class DSALinkedList:
             self.cur = self.cur.next
         return curval
 
-    def contains(self, searchValue):
-        """Added this method 10/10/2020, useful when using this data structure for other purposes e.g. cryptoGraph"""
 
-        for i in self:
-            if i == searchValue:
-                return True
 
-        return False
 
 class DSALinkedListDE:
     """Doubly Ended linked list implementation. added another instance attribute self.tail.
@@ -209,3 +233,21 @@ class DSALinkedListDE:
             curval = self.cur.value
             self.cur = self.cur.next
         return curval
+
+    def removeValue(self, value):
+        """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS"""
+        """Based on a method from https://www.pythoncentral.io/find-remove-node-linked-lists/"""
+        prev = None
+        curr = self.head
+        while curr:
+            if curr.value == value:
+                if prev:
+                    prev.next(curr.next)
+                else:
+                    self.head = curr.next
+                return True
+
+            prev = curr
+            curr = curr.next
+
+        return False

@@ -18,6 +18,9 @@ class DSAGraphVertex:
     def clearVisited(self):
         self._visited = False
 
+    def __repr__(self):
+        return self._label
+
 
 class DSAGraphEdge:
     def __init__(self, fromVertex, toVertex, weight=0.0):
@@ -49,6 +52,7 @@ class DSAGraphWithEdges:
         self._edges = DSALinkedList()  # empty linked list for the edges too
         self.edgeCount = 0
         self.verticesCount = 0
+        self.tempPaths = DSALinkedList()  # added to hold found paths, not ever a complete set
 
     def addVertex(self, label):
         if self.hasVertex(label) is False:
@@ -81,6 +85,21 @@ class DSAGraphWithEdges:
         self._edges.insertLast(newEdge)
 
         self.edgeCount += 1
+
+    def removeVertex(self, label):
+        """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS"""
+        """Will remove vertex and any edges that use it, and update the vertex and edge counts"""
+
+        for v in self._vertices:
+            if v._label == label:
+                self._vertices.removeValue(v)   # remove that value from the linked list of vertices!
+                self.verticesCount -= 1
+
+        for e in self._edges:
+            if e.fromVertex == label or e.toVertex == label:
+                self._edges.removeValue(e)
+                self.edgeCount -= 1
+
 
     def getEdge(self, fromVertex, toVertex):
         result = None
@@ -116,6 +135,22 @@ class DSAGraphWithEdges:
                     adjacency_list.insertLast(self.getVertex(e.toVertex))
 
         return adjacency_list
+
+    def getAdjacentEdges(self, label):
+        """This method added for my modiified DSAGraph implementation
+        to be used in the Cryptograph Application
+        Returns a linkedlist of DSAEdge objects"""
+        adjacent_edges_list = DSALinkedList()
+        vertex = self.getVertex(label)
+        if vertex is None:
+            raise ValueError(f'There is no vertex with label {label}')
+
+        else:
+            for e in self._edges:
+                if e.fromVertex == label:
+                    adjacent_edges_list.insertLast(e)
+
+        return adjacent_edges_list
 
     def isAdjacent(self, label1, label2):
         """This is directional"""
@@ -231,12 +266,16 @@ class DSAGraphWithEdges:
 
         return t
 
+
+
     def readFromCsv(self, filepath):
         with open(filepath, 'r') as myCsv:
             for item in myCsv.readlines():
                 label1, label2 = item.rstrip('\n').split(" ")
 
                 self.addEdge(label1, label2)
+
+
 
 
 if __name__ == "__main__":
