@@ -1,9 +1,19 @@
+############################################
+# IMPORTS
+############################################
+
+
 import json
-import DSAGraphs_modified
-from linkedLists import *
-import sys
 import requests  # for web requests extended functionality only
-import copy
+import sys
+from copy import deepcopy    # TODO: reimplement to not use deepcopy
+
+from dataStructures import *
+
+
+############################################
+# CLASSES
+############################################
 
 
 class BinanceTradingData:
@@ -17,8 +27,6 @@ class BinanceTradingData:
         # TODO: implement get data from API to initialize
         self.trades_24hr_filepath = 'binance_json/24hr.json'
         self.exchangeInfo_filepath = 'binance_json/exchangeInfo.json'
-
-
 
     def displayAllTradeDetails(self, tradeIdx=1, symbol='BTCETH'):
         """as per 'find and display trade details' requirement
@@ -95,7 +103,7 @@ class BinanceTradingData:
         return assetPossibleTrades
 
 
-class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
+class CryptoGraph(DSAGraphWithEdges):
     """Inherits from DSAGraph implementation developed by Stafford Smith for Practical 6,
     Data Structures and Algorithms unit, Curtin University, 2020.
     This subclass adds a method to load edge weights from Binance trading data,
@@ -138,7 +146,7 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
             for v in self._vertices:
                 v.clearVisited()
 
-            self.getAllPathsRec(u, d, path, pathContainer)
+            self._getAllPathsRec(u, d, path, pathContainer)
 
             print('Found all Paths')
             return pathContainer
@@ -146,14 +154,13 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
         except ValueError as ve:
             print('One of those assets does not exist')
 
-    def getAllPathsRec(self, u, d, path, pathContainer):
+    def _getAllPathsRec(self, u, d, path, pathContainer):
         # TODO: implement without using deepcopy
         u.setVisited()
         path.insertLast(u)
 
         if u._label == d._label:  # if we have got to the destination vertex
-            completePath = copy.deepcopy(
-                path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
+            completePath = deepcopy(path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
             completePath.calculateTotalCost(self)
             pathContainer.insertLast(completePath)  # add this complete path to the self.tempPaths attribute NOT WORKING
 
@@ -166,7 +173,7 @@ class CryptoGraph(DSAGraphs_modified.DSAGraphWithEdges):
             for i in self.getAdjacent(u._label):  # get adjacent takes the label
 
                 if not i._visited:
-                    self.getAllPathsRec(i, d, path, pathContainer)
+                    self._getAllPathsRec(i, d, path, pathContainer)
 
         path.removeLast()
         u.clearVisited()
@@ -310,9 +317,9 @@ class PathBox(DSALinkedListDE):
         return slow
 
 
-###################################
-# STATIC METHODS
-##################################
+############################################
+# STATIC METHODS/ FUNCTIONS
+############################################
 
 def getSymbolPrice(symbol):
     """Takes a trade symbol as a string, and performs a GET request.
@@ -377,7 +384,7 @@ def runInteractiveMenu(binanceData=None):
         #######################################
         if user_choice == '1':
 
-            #TODO: use user input lines instead of predetermined paths
+            # TODO: use user input lines instead of predetermined paths
             # trades_24hr_filepath = input("Specify the path to the 24hr trades json file")
             # exchangeInfo_filepath = input("Specify the path to the exchange info json file")
 
@@ -490,7 +497,7 @@ def runInteractiveMenu(binanceData=None):
         #######################################
 
         elif user_choice == '8':
-            #TODO: put the following in a function that the choice calls
+            # TODO: put the following in a function that the choice calls
             """Asset Overview, read in assets.csv as provided in commandline args,
             get assets.csv from user in step one of interactive mode?
             Lists:
@@ -537,20 +544,16 @@ def runReportMode():
     """Takes two commandline arguments <asset_file> and <trade_file>.
     Then runs statistics on the dataset and outputs."""
 
-    #TODO
+    # TODO
     ...
 
 
+############################################
+# MAIN FUNCTION
+############################################
 
 
-
-
-
-
-
-
-if __name__ == "__main__":
-
+def main():
     # Handle commandline arguments
 
     if len(sys.argv) == 1:
@@ -567,3 +570,11 @@ if __name__ == "__main__":
     else:
         print('Incorrect number of arguments, refer to usage:')
         displayUsage()
+
+
+############################################
+# RUN IT...
+############################################
+
+if __name__ == "__main__":
+    main()
