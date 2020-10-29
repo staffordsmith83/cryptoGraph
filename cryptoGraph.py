@@ -25,20 +25,10 @@ class BinanceTradingData:
 
     def __init__(self,
                  trades_24hr_filepath='binance_json/24hr.json',
-                 exchangeInfo_filepath='binance_json/exchangeInfo.json'
-                 ):
-        # TODO: implement get data from API to initialize
+                 exchangeInfo_filepath='binance_json/exchangeInfo.json'):
+
         self.trades_24hr_filepath = trades_24hr_filepath
         self.exchangeInfo_filepath = exchangeInfo_filepath
-
-    def displayAllTradeDetails(self, tradeIdx=1, symbol='BTCETH'):
-        """as per 'find and display trade details' requirement
-        TODO modify this to operate on symbol names"""
-        with open(self.trades_24hr_filepath) as json_file:
-            trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
-
-        for k, v in trades[tradeIdx].items():
-            print(f'{k}: {v}')
 
     def displayTradeDetails(self, symbol):
         """as per 'find and display trade details' requirement
