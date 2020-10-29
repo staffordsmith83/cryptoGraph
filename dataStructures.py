@@ -94,11 +94,7 @@ class DSAGraphWithEdges:
         """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS"""
         """Will remove vertex and any edges that use it, and update the vertex and edge counts"""
 
-        for v in self._vertices:
-            if v._label == label:
-                self._vertices.removeValue(v)  # remove that value from the linked list of vertices!
-                self.verticesCount -= 1
-
+        # remove the edges first so we can still lookup vertices
         for e in self._edges:
             if e.fromVertex == label:
                 self._edges.removeValue(e)
@@ -107,9 +103,17 @@ class DSAGraphWithEdges:
             elif e.toVertex == label:
                 self._edges.removeValue(e)
                 self.edgeCount -= 1
-                # also dencrement the counter for the number of edges the leading vertex has
+                # also decrement the counter for the number of edges the leading vertex has
                 leadingVertex = self.getVertex(label)
                 leadingVertex.edgeCount -= 1
+
+        # now remove the vertex
+        for v in self._vertices:
+            if v._label == label:
+                self._vertices.removeValue(v)  # remove that value from the linked list of vertices!
+                self.verticesCount -= 1
+
+
 
     def getEdge(self, fromVertex, toVertex):
         result = None
@@ -513,14 +517,15 @@ class DSALinkedListDE:
         return curval
 
     def removeValue(self, value):
-        """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS"""
+        """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS """
         """Based on a method from https://www.pythoncentral.io/find-remove-node-linked-lists/"""
+        # TODO: get rid of multiple returns
         prev = None
         curr = self.head
         while curr:
             if curr.value == value:
                 if prev:
-                    prev.next(curr.next)
+                    prev.next = curr.next
                 else:
                     self.head = curr.next
                 return True

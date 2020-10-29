@@ -2,13 +2,12 @@
 # IMPORTS
 ############################################
 
+from dataStructures import *
 
 import json
 import requests  # for web requests extended functionality only
 import sys
-from copy import deepcopy  # TODO: reimplement to not use deepcopy
 import os
-from dataStructures import *
 import pickle
 
 
@@ -118,28 +117,34 @@ class CryptoGraph(DSAGraphWithEdges):
         with open(binanceDataObject.trades_24hr_filepath) as json_file:
             trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
 
-            for e in self._edges:
-                # symbol = e.fromVertex._label + e.toVertex._label
-                symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
+            try:
+                for e in self._edges:
+                    symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
 
-                for t in trades:
-                    if t['symbol'] == symbol:
-                        # set the weight!
-                        e.weight = float(t['weightedAvgPrice'])
-                        e.volume24hr = float(t['volume'])
-                        e.percentPriceChange24hr = float(t['priceChangePercent'])
+                    for t in trades:
+                        if t['symbol'] == symbol:
+                            # set the weight!
+                            e.weight = float(t['weightedAvgPrice'])
+                            e.volume24hr = float(t['volume'])
+                            e.percentPriceChange24hr = float(t['priceChangePercent'])
+
+            except ValueError as ve:
+                print(ve)
 
     def loadEdgeWeightsFromCurrent(self):
         prices = getAllSymbolPrices()
 
-        for e in self._edges:
-            # symbol = e.fromVertex._label + e.toVertex._label
-            symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
+        try:
+            for e in self._edges:
+                symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
 
-            for t in prices:
-                if t['symbol'] == symbol:
-                    # set the weight!
-                    e.weight = t['price']
+                for t in prices:
+                    if t['symbol'] == symbol:
+                        # set the weight!
+                        e.weight = t['price']
+
+        except ValueError as ve:
+            print(ve)
 
     def getAllPaths(self, startNode, endNode):
         path = TradePath()
@@ -157,7 +162,7 @@ class CryptoGraph(DSAGraphWithEdges):
             return pathContainer
 
         except ValueError as ve:
-            print('One of those assets does not exist')
+            print('At least one of those assets does not exist')
 
     def _getAllPathsRec(self, u, d, path, pathContainer):
         # TODO: implement without using deepcopy
@@ -165,15 +170,9 @@ class CryptoGraph(DSAGraphWithEdges):
         path.insertLast(u)
 
         if u._label == d._label:  # if we have got to the destination vertex
-            completePath = deepcopy(
-                path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
+            completePath = deepcopy(path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
             completePath.calculateTotalCost(self)
             pathContainer.insertLast(completePath)  # add this complete path to the self.tempPaths attribute NOT WORKING
-
-            # TODO: replace this with a method that calculates the path cost, and stores it in the object.
-            # TODO: Then retrieve the whole container, sort it by cost order, and print top 10 lowest cost paths.
-            # self.displayPathAndCost(path)
-
 
         else:
             for i in self.getAdjacent(u._label):  # get adjacent takes the label
@@ -209,7 +208,6 @@ class CryptoGraph(DSAGraphWithEdges):
                 pathcost = pathcost - pathcost * commission  # ignore commission for now
 
         print(f'{pathstring} cost = {pathcost}')
-
         print('\n')
 
     def getEdgeValue(self, fromVertex, toVertex, attribute='weight'):
@@ -219,13 +217,15 @@ class CryptoGraph(DSAGraphWithEdges):
             return e.weight
 
     def getTopFiveTradePathsByCost(self, fromAsset, toAsset):
-
+        print('Please be patient, processing...')
         pathContainer = self.getAllPaths(fromAsset, toAsset)
         if pathContainer is not None:
             pathContainer.sortByAttribute(attribute='cost', order='low')
             topFiveByCost = getFirstXElements(pathContainer, 5)
 
             return topFiveByCost
+        else:
+            raise ValueError('No paths between these assets')
 
 
     def __repr__(self):
@@ -343,7 +343,6 @@ def deserialize(path):
     return inObject
 
 
-
 def displayUsage():
     print(
         '______________________________\n'
@@ -378,7 +377,7 @@ def runInteractiveMenu(binanceData=None):
         #######################################
         if user_choice == '1':
 
-            # TODO: use user input lines instead of predetermined paths
+            # TODO LAST BEFORE SUBMIT: use user input lines instead of predetermined paths
             # trades_24hr_filepath = input("Specify the path to the 24hr trades json file")
             # exchangeInfo_filepath = input("Specify the path to the exchange info json file")
 
@@ -474,8 +473,6 @@ def runInteractiveMenu(binanceData=None):
         #######################################
 
         elif user_choice == '7':
-            # TODO: NOT WORKING, 'DSAListNode object is not callable' error or something...
-
             # Do not build valid trades everytime, or we lose previous exclusions!
 
             excludeAsset = ' '
@@ -543,31 +540,37 @@ def runInteractiveMenu(binanceData=None):
         #######################################
 
         elif user_choice == '10':
-            # TODO: Maximum recursion depth exceeded here
-            """For the 10 trades with highest volume in the last 24hrs, report if an indirect trade route exists that
-            is cheaper than the direct trade route."""
+            """Please note, this choice could be further developed by checking all trade pairs
+            for possible profitable indirect paths. When I tried to implement this, processing took
+            too long to be practical. Requires more research into use of optimal data structures."""
 
-            print('WARNING: This operation is processor intensive, and will take some time. Please be patient.')
+            fromAsset = input('Please specify the From Asset for your trade path:')
+            toAsset = input('Please specify the To Asset for your trade path:')
+
             try:
 
-                for trade in highestVolumeTrades:
-                    fromLabel = trade.value.fromVertex
-                    toLabel = trade.value.toVertex
-                    symbol = fromLabel + toLabel
+                topFiveByCost = validTrades.getTopFiveTradePathsByCost(fromAsset, toAsset)
 
-                    topFiveByCost = validTrades.getTopFiveTradePathsByCost(trade.value.fromVertex, trade.value.toVertex)
-                    # topFiveByCost = validTrades.getTopFiveTradePathsByCost('ETH', 'BTC')
+                # attribute path gets VERY COMPLEX for nested lists
+                # Check if the first trade path is the direct path
+                # by checking if the second asset in the path has the toAsset name
+                if topFiveByCost.head.value.value.head.next.value._label != toAsset:
+                    print('Profitable non-direct trade path detected!!!!!!!!!!!!!!')
+                    for path in topFiveByCost:
+                        for v in path.value:
+                            print(v._label + '>', end='')
 
-                    if topFiveByCost.peekFirst().value.cost != trade.value.weight:
-                        print("ALERT: Possible Profitable Trade Path...")
-                        print('Here are the top 5 paths, lowest in price:')
-                        for path in topFiveByCost:
-                            for v in path.value:
-                                print(v._label + '>', end='')
-                            print(path.value.cost)
+                        print(path.value.cost)
+                else:
+                    print("The direct trade path is the cheapest, perhaps search another asset if youre feeling lucky?")
+
 
             except UnboundLocalError as ule:
-                print('Please try running the trade overview function first')
+                print(ule)
+                print("Please run the 'Load data' option from the menu first.")
+
+            except ValueError as ve:
+                print(ve)
 
 
 
@@ -609,12 +612,56 @@ def runInteractiveMenu(binanceData=None):
             print('I dont understand your user_choice.')
 
 
-def runReportMode():
+def runReportMode(exchangeInfo_filepath, trades_24hr_filepath):
     """Takes two commandline arguments <asset_file> and <trade_file>.
     Then runs statistics on the dataset and outputs."""
 
-    # TODO
-    ...
+
+    print('Loading Binance trading data from file')
+    binanceData = BinanceTradingData(trades_24hr_filepath, exchangeInfo_filepath)
+    print('Building graph data structure using vertices from exchange info json file...')
+    validTrades = binanceData.createSkeletonGraph()
+    print('DONE')
+    print('Loading trade attributes from 24hr json file...')
+    validTrades.loadEdgeAttributesFrom24hr(binanceData)
+    print('DONE')
+
+    try:
+        candidateAssets = validTrades._vertices
+        candidateAssets.sortByAttribute(attribute='edgeCount', order='high')
+
+        print('Here are the top 5 assets for number of outward allowable trades:')
+        assetCount = 0
+        for asset in candidateAssets:
+            assetCount += 1
+            print(f'Asset: {asset._label}, Number of Edges: {asset.edgeCount}')
+            if assetCount >= 5:
+                break
+
+
+        candidateTrades = validTrades._edges
+        candidateTrades.sortByAttribute(attribute="volume24hr", order="high")
+        highestVolumeTrades = getFirstXElements(candidateTrades, 5)
+
+        print('Here are the top 5 trades by volume in the last 24hrs:')
+        for t in highestVolumeTrades:
+            print(t.value.fromVertex, t.value.toVertex, t.value.volume24hr)
+
+        candidateTrades.sortByAttribute(attribute="percentPriceChange24hr", order="high")
+        highestChangeTrades = getFirstXElements(candidateTrades, 5)
+
+        print('Here are the top 5 trades by percentage price change in the last 24hrs:')
+        for t in highestChangeTrades:
+            print(t.value.fromVertex, t.value.toVertex, t.value.percentPriceChange24hr)
+
+
+
+    except UnboundLocalError as ule:
+        print(ule)
+        print("Please run the 'Load data' option from the menu first.")
+
+
+
 
 
 ############################################
@@ -632,12 +679,17 @@ def main():
         displayUsage()
     elif len(sys.argv) == 2:
 
-        if sys.argv[1] == '-r':
-            runReportMode()
-        elif sys.argv[1] == '-i':
+        if sys.argv[1] == '-i':
             runInteractiveMenu()
         else:
             print('Commandline argument not recognised')
+
+    elif len(sys.argv) == 4:
+
+        if sys.argv[1] == '-r':
+            exchangeInfo_filepath = sys.argv[2]
+            trades_24hr_filepath = sys.argv[3]
+            runReportMode(exchangeInfo_filepath, trades_24hr_filepath)
 
     else:
         print('Incorrect number of arguments, refer to usage:')
