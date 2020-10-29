@@ -1,4 +1,5 @@
-from copy import deepcopy    # TODO: reimplement to not use deepcopy
+from copy import deepcopy  # TODO: reimplement to not use deepcopy
+
 
 ##########################################
 # CLASSES
@@ -11,7 +12,8 @@ class DSAGraphVertex:
     def __init__(self, label, value=None):
         self._label = label
         self._value = value
-        self._edges = DSALinkedList()
+        self._edges = SortableList()
+        self.edgeCount = 0
         self._visited = False
 
     def setVisited(self):
@@ -25,10 +27,15 @@ class DSAGraphVertex:
 
 
 class DSAGraphEdge:
-    def __init__(self, fromVertex, toVertex, weight=0.0):
+    """ Added v, p, and c default parameters, and added more attribtues to store trade information for Cryptograph.
+    self.weight stores the trade price."""
+
+    def __init__(self, fromVertex, toVertex, weight=0.0, v=None, c=None):
         self.fromVertex = fromVertex
         self.toVertex = toVertex
         self.weight = weight
+        self.volume24hr = v
+        self.percentPriceChange24hr = c
         self._visited = False
 
     def setVisited(self):
@@ -42,11 +49,10 @@ class DSAGraphWithEdges:
     """Non-directional graph. When adding an edge we add a reference in the links of both vertices"""
 
     def __init__(self):
-        self._vertices = DSALinkedList()  # start with an empty list when first constructed
-        self._edges = DSALinkedList()  # empty linked list for the edges too
+        self._vertices = SortableList()  # use this modified implementation of a linkedList that can be sorted
+        self._edges = SortableList()  # empty linked list for the edges too
         self.edgeCount = 0
         self.verticesCount = 0
-
 
     def addVertex(self, label):
         if self.hasVertex(label) is False:
@@ -80,20 +86,30 @@ class DSAGraphWithEdges:
 
         self.edgeCount += 1
 
+        # also increment the counter for the number of edges each vertex has
+        leadingVertex = self.getVertex(label1)
+        leadingVertex.edgeCount += 1
+
     def removeVertex(self, label):
         """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS"""
         """Will remove vertex and any edges that use it, and update the vertex and edge counts"""
 
         for v in self._vertices:
             if v._label == label:
-                self._vertices.removeValue(v)   # remove that value from the linked list of vertices!
+                self._vertices.removeValue(v)  # remove that value from the linked list of vertices!
                 self.verticesCount -= 1
 
         for e in self._edges:
-            if e.fromVertex == label or e.toVertex == label:
+            if e.fromVertex == label:
                 self._edges.removeValue(e)
                 self.edgeCount -= 1
 
+            elif e.toVertex == label:
+                self._edges.removeValue(e)
+                self.edgeCount -= 1
+                # also dencrement the counter for the number of edges the leading vertex has
+                leadingVertex = self.getVertex(label)
+                leadingVertex.edgeCount -= 1
 
     def getEdge(self, fromVertex, toVertex):
         result = None
@@ -261,14 +277,6 @@ class DSAGraphWithEdges:
         return t
 
 
-
-    def readFromCsv(self, filepath):
-        with open(filepath, 'r') as myCsv:
-            for item in myCsv.readlines():
-                label1, label2 = item.rstrip('\n').split(" ")
-
-                self.addEdge(label1, label2)
-
 ##########################################
 # LINKED LISTS CLASSES
 ##########################################
@@ -295,9 +303,9 @@ class DSALinkedList:
             self.head = newNd
 
         else:
-            self.head.previous = newNd      # add a previous ref to the top node
-            newNd.next = self.head          # add a next ref to our new node (not inserted yet)
-            self.head = newNd               # then reassign head to be the new node (shuffles items down)
+            self.head.previous = newNd  # add a previous ref to the top node
+            newNd.next = self.head  # add a next ref to our new node (not inserted yet)
+            self.head = newNd  # then reassign head to be the new node (shuffles items down)
 
     def insertLast(self, newValue):
         newNd = DSAListNode(newValue)
@@ -312,8 +320,8 @@ class DSALinkedList:
 
             # so we have traversed to the last node... what next?
 
-            currNd.next = newNd             # assign the currently last node to point to the new node next...
-            newNd.previous = currNd         # assign the new node to point back to the currently last node.
+            currNd.next = newNd  # assign the currently last node to point to the new node next...
+            newNd.previous = currNd  # assign the new node to point back to the currently last node.
             # newNd is now added to the end!
 
     def isEmpty(self):
@@ -342,12 +350,12 @@ class DSALinkedList:
         # check for one item list
         elif self.head is not None and self.head.next is None:
             nodeValue = self.head.value
-            self.head = self.head.next      # in this case will set head to be None
+            self.head = self.head.next  # in this case will set head to be None
 
-        else:   # multi item list
+        else:  # multi item list
             nodeValue = self.head.value
             self.head = self.head.next
-            self.head.previous = None       # remove the previous ref as our second node is now our head
+            self.head.previous = None  # remove the previous ref as our second node is now our head
 
         return nodeValue
 
@@ -365,13 +373,12 @@ class DSALinkedList:
 
             while currNd.next is not None:
                 prevNd = currNd
-                currNd = currNd.next    # traverse to the second last node, to be able to drop its .next attribute
+                currNd = currNd.next  # traverse to the second last node, to be able to drop its .next attribute
 
-            prevNd.next = None          # cut off the tail of the list
+            prevNd.next = None  # cut off the tail of the list
             nodeValue = currNd.value
 
         return nodeValue
-
 
     def contains(self, searchValue):
         """Added this method 10/10/2020, useful when using this data structure for other purposes e.g. cryptoGraph"""
@@ -400,7 +407,6 @@ class DSALinkedList:
 
         return False
 
-
     def __iter__(self):
 
         self.cur = self.head
@@ -422,18 +428,18 @@ class DSALinkedListDE:
 
     def __init__(self):
         self.head = None
-        self.tail = None    # added for doubly-ended implementation
+        self.tail = None  # added for doubly-ended implementation
 
     def insertFirst(self, newValue):
         newNd = DSAListNode(newValue)
 
         if self.isEmpty():
             self.head = newNd
-            self.tail = newNd   # doubly-ended
+            self.tail = newNd  # doubly-ended
         else:
-            self.head.previous = newNd      # add a previous ref to the top node
-            newNd.next = self.head          # add a next ref to our new node (not inserted yet)
-            self.head = newNd               # then reassign head to be the new node (shuffles items down)
+            self.head.previous = newNd  # add a previous ref to the top node
+            newNd.next = self.head  # add a next ref to our new node (not inserted yet)
+            self.head = newNd  # then reassign head to be the new node (shuffles items down)
 
     def insertLast(self, newValue):
         newNd = DSAListNode(newValue)
@@ -442,8 +448,8 @@ class DSALinkedListDE:
             self.head = newNd
             self.tail = newNd  # doubly-ended
         else:
-            self.tail.next = newNd             # assign the currently last node to point to the new node next...
-            newNd.previous = self.tail        # assign the new node to point back to the currently last node.
+            self.tail.next = newNd  # assign the currently last node to point to the new node next...
+            newNd.previous = self.tail  # assign the new node to point back to the currently last node.
             self.tail = newNd
 
     def isEmpty(self):
@@ -470,10 +476,10 @@ class DSALinkedListDE:
             self.head = None
             self.tail = None
 
-        else:   # multi item list
+        else:  # multi item list
             nodeValue = self.head.value
             self.head = self.head.next
-            self.head.previous = None       # remove the previous ref as our second node is now our head
+            self.head.previous = None  # remove the previous ref as our second node is now our head
 
         return nodeValue
 
@@ -524,6 +530,96 @@ class DSALinkedListDE:
 
         return False
 
+
+class SortableList(DSALinkedListDE):
+    """NEW IMPLEMENTATION FOR Cryptograph. TO be used to hold graph edges, or vertices. 
+    These can then be sorted and returned in sorted order for
+    display."""
+
+    def sortByAttribute(self, attribute="edgeCount", order="high"):
+        """
+        For example:
+        Allow the container of a graph's vertices to be sorted by the number of outward
+        connections each of those vertices has. Wrapper for the
+        mergeSort() method and its helper methods sortedMerge() and getMiddle()"""
+        self.head = self.mergeSort(self.head, attribute, order)
+
+    #################################
+    # ADD SORTING METHODS THAT USE THE self.edgeCount ATTRIBUTE
+    def sortedMerge(self, a, b, attribute, order):
+        """ Adapted from https://www.geeksforgeeks.org/merge-sort-for-linked-list/"""
+        result = None
+
+        # Base cases
+        if a is None:
+            return b
+        if b is None:
+            return a
+
+        # pick either a or b and recur..
+        aAttribute = getattr(a.value, attribute)  # we can retrieve the programmatically determined attribute
+        bAttribute = getattr(b.value, attribute)
+
+        if order == 'high':
+            if aAttribute >= bAttribute:
+                result = a
+                result.next = self.sortedMerge(a.next, b, attribute, order)
+            else:
+                result = b
+                result.next = self.sortedMerge(a, b.next, attribute, order)
+
+        elif order == 'low':
+            if aAttribute <= bAttribute:
+                result = a
+                result.next = self.sortedMerge(a.next, b, attribute, order)
+            else:
+                result = b
+                result.next = self.sortedMerge(a, b.next, attribute, order)
+
+        else:
+            raise ValueError
+
+        return result
+
+    def mergeSort(self, h, attribute, order):
+        """ Adapted from https://www.geeksforgeeks.org/merge-sort-for-linked-list/"""
+        # Base case if head is None
+        if h is None or h.next is None:
+            return h
+
+            # get the middle of the list
+        middle = self.getMiddle(h)
+        nexttomiddle = middle.next
+
+        # set the next of middle node to None
+        middle.next = None
+
+        # Apply mergeSort on left list
+        left = self.mergeSort(h, attribute, order)
+
+        # Apply mergeSort on right list
+        right = self.mergeSort(nexttomiddle, attribute, order)
+
+        # Merge the left and right lists
+        sortedlist = self.sortedMerge(left, right, attribute, order)
+        return sortedlist
+
+    def getMiddle(self, head):
+        """ Adapted from https://www.geeksforgeeks.org/merge-sort-for-linked-list/"""
+        if (head == None):
+            return head
+
+        slow = head
+        fast = head
+
+        while (fast.next != None and
+               fast.next.next != None):
+            slow = slow.next
+            fast = fast.next.next
+
+        return slow
+
+
 ###########################################
 # STACKS AND QUEUES CLASSES
 ##########################################
@@ -536,7 +632,7 @@ class Stack:
     def getCount(self):
         """ Return the count of items in the stack as an integer."""
         count = 0
-        for i in self.items:    # uses the __iter__ method
+        for i in self.items:  # uses the __iter__ method
             count = count + 1
         return count
 
@@ -547,12 +643,12 @@ class Stack:
     def push(self, item):
         """Add another element, and increment the count"""
         # self.items.insertLast(item)
-        self.items.insertFirst(item)        # add to and remove from the start of the list, more efficient!
+        self.items.insertFirst(item)  # add to and remove from the start of the list, more efficient!
 
     def pop(self):
         """Return the last element, zero it in stack, and decrement the count"""
         # return self.items.removeLast()
-        return self.items.removeFirst()     # add to and remove from the start of the list, more efficient!
+        return self.items.removeFirst()  # add to and remove from the start of the list, more efficient!
 
     def top(self):
         """Return the last element"""
