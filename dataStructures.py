@@ -8,6 +8,8 @@ from copy import deepcopy  # TODO: reimplement to not use deepcopy
 ##########################################
 
 class DSAGraphVertex:
+    """ Each instance describe a vertex in the graph.
+    This class is adapted from the DSAGraph implementation for Practical 6."""
 
     def __init__(self, label, value=None):
         self._label = label
@@ -46,7 +48,8 @@ class DSAGraphEdge:
 
 
 class DSAGraphWithEdges:
-    """Non-directional graph. When adding an edge we add a reference in the links of both vertices"""
+    """Non-directional graph. When adding an edge we add a reference in the links of both vertices.
+    This class is adapted from the DSAGraph implementation for Practical 6."""
 
     def __init__(self):
         self._vertices = SortableList()  # use this modified implementation of a linkedList that can be sorted
@@ -88,6 +91,7 @@ class DSAGraphWithEdges:
 
         # also increment the counter for the number of edges each vertex has
         leadingVertex = self.getVertex(label1)
+        # TODO: do I need to maintain the list of edges for the vertex itself?
         leadingVertex.edgeCount += 1
 
     def removeVertex(self, label):
@@ -113,8 +117,6 @@ class DSAGraphWithEdges:
                 self._vertices.removeValue(v)  # remove that value from the linked list of vertices!
                 self.verticesCount -= 1
 
-
-
     def getEdge(self, fromVertex, toVertex):
         result = None
         for e in self._edges:
@@ -135,9 +137,8 @@ class DSAGraphWithEdges:
         return result
 
     def getAdjacent(self, label):
-        """Implementation changed with edge version of graph data structure.
-        This may need renaming because this graph is now directional..."""
-        adjacency_list = DSALinkedList()
+        """Implementation changed with edge version of graph data structure"""
+        adjacency_list = SortableList()
 
         vertex = self.getVertex(label)
         if vertex is None:
@@ -150,135 +151,57 @@ class DSAGraphWithEdges:
 
         return adjacency_list
 
-    def getAdjacentEdges(self, label):
-        """This method added for my modiified DSAGraph implementation
-        to be used in the Cryptograph Application
-        Returns a linkedlist of DSAEdge objects"""
-        adjacent_edges_list = DSALinkedList()
-        vertex = self.getVertex(label)
-        if vertex is None:
-            raise ValueError(f'There is no vertex with label {label}')
+    # def getAdjacentEdges(self, label):
+    #     """This method added for my modiified DSAGraph implementation
+    #     to be used in the Cryptograph Application
+    #     Returns a linkedlist of DSAEdge objects"""
+    #     adjacent_edges_list = DSALinkedList()
+    #     vertex = self.getVertex(label)
+    #     if vertex is None:
+    #         raise ValueError(f'There is no vertex with label {label}')
+    #
+    #     else:
+    #         for e in self._edges:
+    #             if e.fromVertex == label:
+    #                 adjacent_edges_list.insertLast(e)
+    #
+    #     return adjacent_edges_list
 
-        else:
-            for e in self._edges:
-                if e.fromVertex == label:
-                    adjacent_edges_list.insertLast(e)
+    # def isAdjacent(self, label1, label2):
+    #     """This is directional"""
+    #     result = False
+    #     try:
+    #         neighbours = self.getAdjacent(label1)
+    #         for v in neighbours:
+    #             if v._label == label2:
+    #                 result = True
+    #
+    #     except ValueError as ve:
+    #         print(ve)
+    #
+    #     return result
 
-        return adjacent_edges_list
+    # def displayAsList(self):
+    #     for v in self._vertices:
+    #         print(f'{v._label}', end=", ")
+    #     print('\n')
 
-    def isAdjacent(self, label1, label2):
-        """This is directional"""
-        result = False
-        try:
-            neighbours = self.getAdjacent(label1)
-            for v in neighbours:
-                if v._label == label2:
-                    result = True
+    # def displayAsMatrix(self):
+    #     """Not working... Stops printing the vertices after first one...had to use deepcopy...
+    #     Maybe a problem with the iterator implementation in my LinkedLists class?"""
+    #     vertices = deepcopy(self._vertices)
+    #     for v in vertices:
+    #         print(f'\n{v._label}:', end=" ")
+    #         adjList = self.getAdjacent(v._label)
+    #
+    #         for n in adjList:
+    #             print(f'{n._label}', end=", ")
+    #
+    #     print('\n')
 
-        except ValueError as ve:
-            print(ve)
-
-        return result
-
-    def displayAsList(self):
-        for v in self._vertices:
-            print(f'{v._label}', end=", ")
-        print('\n')
-
-    def displayAsMatrix(self):
-        """Not working... Stops printing the vertices after first one...had to use deepcopy...
-        Maybe a problem with the iterator implementation in my LinkedLists class?"""
-        vertices = deepcopy(self._vertices)
-        for v in vertices:
-            print(f'\n{v._label}:', end=" ")
-            adjList = self.getAdjacent(v._label)
-
-            for n in adjList:
-                print(f'{n._label}', end=", ")
-
-        print('\n')
-
-    def displayEdges(self):
-        for e in self._edges:
-            print(f'{e.fromVertex} --> {e.toVertex}: {e.weight}')
-
-    def searchDepthFirst(self):
-        """NB This returns a queue of objects."""
-        # mark all vertices as unvisited
-        vertices = self._vertices
-        for v in vertices:
-            v.clearVisited()
-
-        # establish the output container
-        t = Queue()
-
-        # pick one of the vertices to start with
-        v = vertices.peekFirst()
-        t.enqueue(v)
-        v.setVisited()
-
-        # make a traversal stack of items to check
-        s = Stack()
-        s.push(v)
-
-        # while the stack is not empty:
-        while not s.isEmpty():
-
-            # while v has another vertex in its links to look at:
-            v = s.top()
-            if any(link._visited is False for link in self.getAdjacent(v._label)):
-
-                for w in self.getAdjacent(v._label):
-
-                    if not w._visited:
-                        t.enqueue(w)
-                        w.setVisited()
-
-                        s.push(w)
-                        v = w  # need to make the operation move to the links of w now
-                        break  # stop going through the links of v now and switch to the links of w
-
-            else:
-                v = s.pop()  # only pop when we have gone through all items in that item.
-        return t
-
-    def searchBreadthFirst(self):
-        """NB This returns a queue of objects."""
-        # mark all vertices as unvisited
-        vertices = self._vertices
-        for v in vertices:
-            v.clearVisited()
-
-        # establish our output container
-        t = Queue()
-
-        # pick one of the vertices to start with
-        v = vertices.peekFirst()
-        t.enqueue(v)
-        v.setVisited()
-
-        # make a traversal queue that loads up items to check
-        s = Queue()
-        s.enqueue(v)
-
-        # while the queue is not empty:
-        while not s.isEmpty():
-
-            # while v has another vertex in its links to look at:
-            v = s.dequeue()
-            # while any(link._visited is False for link in self.getAdjacent(v._label)):  # can this be made more efficient?
-
-            for w in self.getAdjacent(v._label):
-
-                if not w._visited:
-                    t.enqueue(w)  # the output queue
-                    w.setVisited()
-                    # print(f'Putting {w._label} into the traverse queue')
-                    s.enqueue(w)
-                    # v = w  # need to make the operation move to the links of w now
-                    # break  # stop going through the links of v now and switch to the links of w
-
-        return t
+    # def displayEdges(self):
+    #     for e in self._edges:
+    #         print(f'{e.fromVertex} --> {e.toVertex}: {e.weight}')
 
 
 ##########################################
@@ -295,135 +218,135 @@ class DSAListNode:
         self.previous = None
 
 
-class DSALinkedList:
-
-    def __init__(self):
-        self.head = None
-
-    def insertFirst(self, newValue):
-        newNd = DSAListNode(newValue)
-
-        if self.isEmpty():
-            self.head = newNd
-
-        else:
-            self.head.previous = newNd  # add a previous ref to the top node
-            newNd.next = self.head  # add a next ref to our new node (not inserted yet)
-            self.head = newNd  # then reassign head to be the new node (shuffles items down)
-
-    def insertLast(self, newValue):
-        newNd = DSAListNode(newValue)
-
-        if self.isEmpty():
-            self.head = newNd
-
-        else:
-            currNd = self.head
-            while currNd.next:  # check each item in list and set currNd to be the last node
-                currNd = currNd.next
-
-            # so we have traversed to the last node... what next?
-
-            currNd.next = newNd  # assign the currently last node to point to the new node next...
-            newNd.previous = currNd  # assign the new node to point back to the currently last node.
-            # newNd is now added to the end!
-
-    def isEmpty(self):
-        return self.head is None
-
-    def peekFirst(self):
-        if self.isEmpty():
-            raise ValueError('List is empty')
-        else:
-            return self.head.value
-
-    def peekLast(self):
-        if self.isEmpty():
-            raise ValueError('List is empty')
-        else:
-            currNd = self.head
-            while currNd.next:  # check each item in list and set currNd to be the last node
-                currNd = currNd.next
-
-            return currNd.value
-
-    def removeFirst(self):
-        if self.isEmpty():
-            raise ValueError('List is empty')
-
-        # check for one item list
-        elif self.head is not None and self.head.next is None:
-            nodeValue = self.head.value
-            self.head = self.head.next  # in this case will set head to be None
-
-        else:  # multi item list
-            nodeValue = self.head.value
-            self.head = self.head.next
-            self.head.previous = None  # remove the previous ref as our second node is now our head
-
-        return nodeValue
-
-    def removeLast(self):
-        if self.isEmpty():
-            raise ValueError('List is empty')
-
-        elif self.head.next is None:
-            nodeValue = self.head.value
-            self.head = None
-
-        else:
-            prevNd = None
-            currNd = self.head
-
-            while currNd.next is not None:
-                prevNd = currNd
-                currNd = currNd.next  # traverse to the second last node, to be able to drop its .next attribute
-
-            prevNd.next = None  # cut off the tail of the list
-            nodeValue = currNd.value
-
-        return nodeValue
-
-    def contains(self, searchValue):
-        """Added this method 10/10/2020, useful when using this data structure for other purposes e.g. cryptoGraph"""
-
-        for i in self:
-            if i == searchValue:
-                return True
-
-        return False
-
-    def removeValue(self, value):
-        """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS"""
-        """Based on a method from https://www.pythoncentral.io/find-remove-node-linked-lists/"""
-        prev = None
-        curr = self.head
-        while curr:
-            if curr.value == value:
-                if prev:
-                    prev.next = curr.next
-                else:
-                    self.head = curr.next
-                return True
-
-            prev = curr
-            curr = curr.next
-
-        return False
-
-    def __iter__(self):
-
-        self.cur = self.head
-        return self
-
-    def __next__(self):
-        curval = None
-        if self.cur == None:
-            raise StopIteration
-        else:
-            curval = self.cur.value
-            self.cur = self.cur.next
-        return curval
+# class DSALinkedList:
+#
+#     def __init__(self):
+#         self.head = None
+#
+#     def insertFirst(self, newValue):
+#         newNd = DSAListNode(newValue)
+#
+#         if self.isEmpty():
+#             self.head = newNd
+#
+#         else:
+#             self.head.previous = newNd  # add a previous ref to the top node
+#             newNd.next = self.head  # add a next ref to our new node (not inserted yet)
+#             self.head = newNd  # then reassign head to be the new node (shuffles items down)
+#
+#     def insertLast(self, newValue):
+#         newNd = DSAListNode(newValue)
+#
+#         if self.isEmpty():
+#             self.head = newNd
+#
+#         else:
+#             currNd = self.head
+#             while currNd.next:  # check each item in list and set currNd to be the last node
+#                 currNd = currNd.next
+#
+#             # so we have traversed to the last node... what next?
+#
+#             currNd.next = newNd  # assign the currently last node to point to the new node next...
+#             newNd.previous = currNd  # assign the new node to point back to the currently last node.
+#             # newNd is now added to the end!
+#
+#     def isEmpty(self):
+#         return self.head is None
+#
+#     def peekFirst(self):
+#         if self.isEmpty():
+#             raise ValueError('List is empty')
+#         else:
+#             return self.head.value
+#
+#     def peekLast(self):
+#         if self.isEmpty():
+#             raise ValueError('List is empty')
+#         else:
+#             currNd = self.head
+#             while currNd.next:  # check each item in list and set currNd to be the last node
+#                 currNd = currNd.next
+#
+#             return currNd.value
+#
+#     def removeFirst(self):
+#         if self.isEmpty():
+#             raise ValueError('List is empty')
+#
+#         # check for one item list
+#         elif self.head is not None and self.head.next is None:
+#             nodeValue = self.head.value
+#             self.head = self.head.next  # in this case will set head to be None
+#
+#         else:  # multi item list
+#             nodeValue = self.head.value
+#             self.head = self.head.next
+#             self.head.previous = None  # remove the previous ref as our second node is now our head
+#
+#         return nodeValue
+#
+#     def removeLast(self):
+#         if self.isEmpty():
+#             raise ValueError('List is empty')
+#
+#         elif self.head.next is None:
+#             nodeValue = self.head.value
+#             self.head = None
+#
+#         else:
+#             prevNd = None
+#             currNd = self.head
+#
+#             while currNd.next is not None:
+#                 prevNd = currNd
+#                 currNd = currNd.next  # traverse to the second last node, to be able to drop its .next attribute
+#
+#             prevNd.next = None  # cut off the tail of the list
+#             nodeValue = currNd.value
+#
+#         return nodeValue
+#
+#     def contains(self, searchValue):
+#         """Added this method 10/10/2020, useful when using this data structure for other purposes e.g. cryptoGraph"""
+#
+#         for i in self:
+#             if i == searchValue:
+#                 return True
+#
+#         return False
+#
+#     def removeValue(self, value):
+#         """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS"""
+#         """Based on a method from https://www.pythoncentral.io/find-remove-node-linked-lists/"""
+#         prev = None
+#         curr = self.head
+#         while curr:
+#             if curr.value == value:
+#                 if prev:
+#                     prev.next = curr.next
+#                 else:
+#                     self.head = curr.next
+#                 return True
+#
+#             prev = curr
+#             curr = curr.next
+#
+#         return False
+#
+#     def __iter__(self):
+#
+#         self.cur = self.head
+#         return self
+#
+#     def __next__(self):
+#         curval = None
+#         if self.cur == None:
+#             raise StopIteration
+#         else:
+#             curval = self.cur.value
+#             self.cur = self.cur.next
+#         return curval
 
 
 class DSALinkedListDE:
@@ -538,8 +461,7 @@ class DSALinkedListDE:
 
 class SortableList(DSALinkedListDE):
     """NEW IMPLEMENTATION FOR Cryptograph. TO be used to hold graph edges, or vertices. 
-    These can then be sorted and returned in sorted order for
-    display."""
+    These can then be sorted and returned in sorted order for display."""
 
     def sortByAttribute(self, attribute="edgeCount", order="high"):
         """
@@ -555,16 +477,17 @@ class SortableList(DSALinkedListDE):
         """ Adapted from https://www.geeksforgeeks.org/merge-sort-for-linked-list/"""
         result = None
 
-        # Base cases
+        # BASE CASES
         if a is None:
             return b
         if b is None:
             return a
 
-        # pick either a or b and recur..
-        aAttribute = getattr(a.value, attribute)  # we can retrieve the programmatically determined attribute
+        # use Python's built-in getattr() method to retrieve the programmatically determined attribute
+        aAttribute = getattr(a.value, attribute)
         bAttribute = getattr(b.value, attribute)
 
+        # functionality to sort high-low or low-high
         if order == 'high':
             if aAttribute >= bAttribute:
                 result = a
@@ -588,115 +511,37 @@ class SortableList(DSALinkedListDE):
 
     def mergeSort(self, h, attribute, order):
         """ Adapted from https://www.geeksforgeeks.org/merge-sort-for-linked-list/"""
-        # Base case if head is None
+        # BASE CASE: if the head is None
         if h is None or h.next is None:
             return h
 
-            # get the middle of the list
+        # Find the mid point of the list
         middle = self.getMiddle(h)
         nexttomiddle = middle.next
 
         # set the next of middle node to None
         middle.next = None
 
-        # Apply mergeSort on left list
+        # MergeSort left sublist
         left = self.mergeSort(h, attribute, order)
 
-        # Apply mergeSort on right list
+        # Mergesort the right sublist
         right = self.mergeSort(nexttomiddle, attribute, order)
 
-        # Merge the left and right lists
+        # merge the right and left
         sortedlist = self.sortedMerge(left, right, attribute, order)
         return sortedlist
 
     def getMiddle(self, head):
         """ Adapted from https://www.geeksforgeeks.org/merge-sort-for-linked-list/"""
-        if (head == None):
+        if head is None:
             return head
 
-        slow = head
-        fast = head
+        slower = head
+        faster = head
 
-        while (fast.next != None and
-               fast.next.next != None):
-            slow = slow.next
-            fast = fast.next.next
+        while faster.next is not None and faster.next.next is not None:
+            slower = slower.next
+            faster = faster.next.next
 
-        return slow
-
-
-###########################################
-# STACKS AND QUEUES CLASSES
-##########################################
-
-class Stack:
-
-    def __init__(self):  # the constructor
-        self.items = DSALinkedList()
-
-    def getCount(self):
-        """ Return the count of items in the stack as an integer."""
-        count = 0
-        for i in self.items:  # uses the __iter__ method
-            count = count + 1
-        return count
-
-    def isEmpty(self):
-        """ Will return True if no items in the stack."""
-        return self.items.isEmpty()
-
-    def push(self, item):
-        """Add another element, and increment the count"""
-        # self.items.insertLast(item)
-        self.items.insertFirst(item)  # add to and remove from the start of the list, more efficient!
-
-    def pop(self):
-        """Return the last element, zero it in stack, and decrement the count"""
-        # return self.items.removeLast()
-        return self.items.removeFirst()  # add to and remove from the start of the list, more efficient!
-
-    def top(self):
-        """Return the last element"""
-        return self.items.peekFirst()
-
-
-class Queue:
-    """ Parent Class, no loading or unloading or peek methods Implemented."""
-
-    def __init__(self, capacity=100, dtype=object):  # the constructor, with defaults
-        self.items = DSALinkedList()
-
-    def getCount(self):
-        """ Return the count of items in the queue as an integer."""
-        count = 0
-        for i in self.items:  # uses the __iter__ method
-            count = count + 1
-        return count
-
-    def isEmpty(self):
-        """ Will return True if no items in the queue."""
-        return self.items.isEmpty()
-
-    def peek(self):
-        """Return the front element."""
-        return self.items.peekFirst()
-
-    def enqueue(self, item):
-        """Add another element at the back, and increment the count"""
-        self.items.insertLast(item)
-
-    def dequeue(self):
-        """Return the front element, decrement the count, and shuffle everything down"""
-        return self.items.removeFirst()
-
-
-##########################################
-# STATIC FUNCTIONS
-##########################################
-
-def displayQueueLabels(queue):
-    """Intended to be used in conjunction with the search functions that return a queue of vertices."""
-
-    while not queue.isEmpty():
-        v = queue.dequeue()
-        print(v._label)
+        return slower

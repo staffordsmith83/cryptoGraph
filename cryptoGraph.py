@@ -1,3 +1,9 @@
+###########################################
+# TODO: Deal with no internet connection situation, make sure can work without.
+# Find sepcific exceptions raised by te requests thing.
+
+
+
 ############################################
 # IMPORTS
 ############################################
@@ -24,15 +30,19 @@ class BinanceTradingData:
     the methods to parse it, the methods to display it, and the methods to create a graph from it"""
 
     def __init__(self,
-                 trades_24hr_filepath='binance_json/24hr.json',
-                 exchangeInfo_filepath='binance_json/exchangeInfo.json'):
+                 trades_24hr_filepath='24hr.json',
+                 exchangeInfo_filepath='exchangeInfo.json',
+                 localPrices_filepath='price.json'):
 
         self.trades_24hr_filepath = trades_24hr_filepath
         self.exchangeInfo_filepath = exchangeInfo_filepath
+        self.localPrices_filepath = localPrices_filepath
 
     def displayTradeDetails(self, symbol):
-        """as per 'find and display trade details' requirement
-        TODO modify this to operate on symbol names"""
+        """as per 'find and display trade details' requirement. This method sakes a symbol code and searches
+        the 24hr trades file for information pertaining to its trades over the last 24 hours. Also compares this
+        information to the current trade price from the Binance API."""
+
         with open(self.trades_24hr_filepath) as json_file:
             trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
 
@@ -52,7 +62,8 @@ class BinanceTradingData:
 
         try:
             oldPrice = float(tradeDetails['weightedAvgPrice'])
-            updatedPrice = getSymbolPrice(symbol)
+            #TODO: deal with no internet connection in next line...
+            updatedPrice = getCurrentSymbolPrice(symbol)
             print(f'The latest price from the Binance API is: {updatedPrice}')
             priceDifference = (updatedPrice - oldPrice) / oldPrice * 100
             priceDifference = round(priceDifference, 2)
@@ -65,11 +76,27 @@ class BinanceTradingData:
                 print(
                     f'The current price is approximately {priceDifference}% more than the last 24hr weighted average.')
 
-
         except ValueError as ve:
             print(ve)
 
+
+
+    def getAssetTrades(self, assetName):
+        """Takes an assetName, and iterates over the exchange Info file to get all the possible trades for that asset"""
+        with open(self.exchangeInfo_filepath) as json_file:
+            ei = json.load(json_file)
+
+        assetPossibleTrades = SortableList()
+        for symbol in ei['symbols']:
+
+            if symbol["baseAsset"] == assetName:
+                assetPossibleTrades.insertLast(symbol["quoteAsset"])
+
+        return assetPossibleTrades
+
+
     def createSkeletonGraph(self):
+        """Creates a graph object from the trade data. Returns graph."""
         with open(self.exchangeInfo_filepath) as json_file:
             ei = json.load(json_file)
 
@@ -82,18 +109,6 @@ class BinanceTradingData:
                 validTrades.addEdge(symbol['baseAsset'], symbol['quoteAsset'])
 
         return validTrades
-
-    def getAssetTrades(self, assetName):
-        with open(self.exchangeInfo_filepath) as json_file:
-            ei = json.load(json_file)
-
-        assetPossibleTrades = DSALinkedList()
-        for symbol in ei['symbols']:
-
-            if symbol["baseAsset"] == assetName:
-                assetPossibleTrades.insertLast(symbol["quoteAsset"])
-
-        return assetPossibleTrades
 
 
 class CryptoGraph(DSAGraphWithEdges):
@@ -111,17 +126,41 @@ class CryptoGraph(DSAGraphWithEdges):
                 for e in self._edges:
                     symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
 
-                    for t in trades:
-                        if t['symbol'] == symbol:
-                            # set the weight!
-                            e.weight = float(t['weightedAvgPrice'])
-                            e.volume24hr = float(t['volume'])
-                            e.percentPriceChange24hr = float(t['priceChangePercent'])
+                    # for t in trades:
+                    #     if t['symbol'] == symbol:
+                    #         # e.weight = float(t['weightedAvgPrice']) # cost now taken from price.json
+                    #         e.volume24hr = float(t['volume'])
+                    #         e.percentPriceChange24hr = float(t['priceChangePercent'])
+
+                    # Replaced above with direct dictionary access to reduce complexity.
+
+
 
             except ValueError as ve:
                 print(ve)
 
+    def loadCostFromLocalJson(self, binanceDataObject):
+        with open(binanceDataObject.localPrices_filepath) as json_file:
+            prices = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
+
+            try:
+                for e in self._edges:
+                    symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
+
+                    for t in prices:
+                        if t['symbol'] == symbol:
+                            # set the weight!
+                            e.weight = t['price']
+
+                print('Updated graph edge weights with prices from local file')
+
+            except ValueError as ve:
+                print(ve)
+
+
+
     def loadEdgeWeightsFromCurrent(self):
+
         prices = getAllSymbolPrices()
 
         try:
@@ -133,8 +172,13 @@ class CryptoGraph(DSAGraphWithEdges):
                         # set the weight!
                         e.weight = t['price']
 
+            print('Updated graph edge weights with most recent price from Binance')
+
         except ValueError as ve:
             print(ve)
+
+        except TypeError as te:
+            print(te)
 
     def getAllPaths(self, startNode, endNode):
         path = TradePath()
@@ -154,51 +198,24 @@ class CryptoGraph(DSAGraphWithEdges):
         except ValueError as ve:
             print('At least one of those assets does not exist')
 
-    def _getAllPathsRec(self, u, d, path, pathContainer):
-        # TODO: implement without using deepcopy
-        u.setVisited()
-        path.insertLast(u)
+    def _getAllPathsRec(self, origin, destination, path, pathContainer):
+        origin.setVisited()
+        path.insertLast(origin)
 
-        if u._label == d._label:  # if we have got to the destination vertex
+        if origin._label == destination._label:  # if we have got to the destination vertex
             completePath = deepcopy(path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
             completePath.calculateTotalCost(self)
             pathContainer.insertLast(completePath)  # add this complete path to the self.tempPaths attribute NOT WORKING
 
         else:
-            for i in self.getAdjacent(u._label):  # get adjacent takes the label
+            for i in self.getAdjacent(origin._label):  # get adjacent takes the label
 
                 if not i._visited:
-                    self._getAllPathsRec(i, d, path, pathContainer)
+                    self._getAllPathsRec(i, destination, path, pathContainer)
 
         path.removeLast()
-        u.clearVisited()
+        origin.clearVisited()
 
-    def displayPathAndCost(self, path):
-        commission = 0.001
-        pathstring = ''
-        pathcost = 1
-        fromLabel = None  # the first toLabel will be the label of the head
-        toLabel = path.head.value._label
-        for i in path:
-
-            if fromLabel is None:
-                # print('this is the first node, moving to the next one in the list to get the first edge')
-                fromLabel = toLabel  # increment so that the from Label is now the first list item
-                pathstring = i._label
-            else:
-                pathstring = f'{pathstring} > {i._label}'
-                fromLabel = toLabel
-                toLabel = i._label
-                cost = float(self.getEdgeValue(fromLabel, i._label))
-                if cost == 0.0:
-                    print('Be careful, no edge weight recorded for this trade')
-                    cost = 1.0
-
-                pathcost = pathcost * cost
-                pathcost = pathcost - pathcost * commission  # ignore commission for now
-
-        print(f'{pathstring} cost = {pathcost}')
-        print('\n')
 
     def getEdgeValue(self, fromVertex, toVertex, attribute='weight'):
 
@@ -249,7 +266,7 @@ class TradePath(DSALinkedListDE):
                     raise ValueError('Be careful, no edge weight recorded for this trade')
 
                 pathcost = pathcost * cost
-                # pathcost = pathcost - pathcost * commission  # ignore commission for now
+                pathcost = pathcost + pathcost * commission  # ignore commission for now
 
         # Now set the self.cost attribute to be our calculated total cost!
         self.cost = pathcost
@@ -261,18 +278,21 @@ class TradePath(DSALinkedListDE):
 # STATIC METHODS/ FUNCTIONS
 ############################################
 
-def getSymbolPrice(symbol):
+def getCurrentSymbolPrice(symbol):
     """Takes a trade symbol as a string, and performs a GET request.
     Return the current trade price as a float"""
     baseUrl = 'https://api.binance.com/api/v3/ticker/price?symbol='
     requestUrl = baseUrl + symbol
     print("Making Web Request for Latest Price Info...")
+
     resp = requests.get(requestUrl)
     if resp.status_code != 200:
         # This means something went wrong.
         raise ValueError
     print("Latest Price Info Received from Binance API")
     return float(resp.json()['price'])
+
+
 
 
 def getAllSymbolPrices():
@@ -288,12 +308,13 @@ def getAllSymbolPrices():
         print("Latest Price Info Received from Binance API")
         return resp.json()
 
-    except ConnectionError as ce:
-        print('Could not connect to internet' + str(ce))
+    except requests.exceptions.RequestException as e:
+
+        print("Timed out or connection problem. You cannot update the pices at this time.")
 
 
 def getFirstXElements(inList, x):
-    outList = DSALinkedListDE()
+    outList = SortableList()
     currNode = inList.head
     for i in range(x):
         currNode = _getFirstXElementsRec(currNode, outList)
@@ -370,25 +391,29 @@ def runInteractiveMenu(binanceData=None):
             # TODO LAST BEFORE SUBMIT: use user input lines instead of predetermined paths
             # trades_24hr_filepath = input("Specify the path to the 24hr trades json file")
             # exchangeInfo_filepath = input("Specify the path to the exchange info json file")
+            # localPrices_filepath = input("Specify the path to the prices json file")
 
-            trades_24hr_filepath = 'binance_json/24hr.json'
-            exchangeInfo_filepath = 'binance_json/exchangeInfo.json'
+            trades_24hr_filepath = '24hr.json'
+            exchangeInfo_filepath = 'exchangeInfo.json'
+            localPrices_filepath = 'price.json'
 
             print('Loading Binance trading data from file')
-            binanceData = BinanceTradingData(trades_24hr_filepath, exchangeInfo_filepath)
+            binanceData = BinanceTradingData(trades_24hr_filepath, exchangeInfo_filepath, localPrices_filepath)
             print('Building graph data structure using vertices from exchange info json file...')
             validTrades = binanceData.createSkeletonGraph()
             print('DONE')
             print('Loading trade attributes from 24hr json file...')
             validTrades.loadEdgeAttributesFrom24hr(binanceData)
             print('DONE')
+            print('Updating trade costs from prices json file...')
+            validTrades.loadCostFromLocalJson(binanceData)
+            print('DONE')
 
         #######################################
-
+        # TODO: make this step able to be run using a dummy price.json file
         elif user_choice == '2':
             try:
                 validTrades.loadEdgeWeightsFromCurrent()
-                print('Updated graph edge weights with most recent price from Binance')
 
             except UnboundLocalError as ule:
                 print(ule)
@@ -430,11 +455,16 @@ def runInteractiveMenu(binanceData=None):
             toAsset = input('Please specify the To Asset for your trade path:')
             try:
                 pathContainer = validTrades.getAllPaths(fromAsset, toAsset)
-                for path in pathContainer:
-                    # print(f'{path.head.value._label}->{path.tail.value._label}: cost={path.cost}')
-                    for v in path:
-                        print(v._label + '>', end='')
-                    print(path.cost)
+                if pathContainer:
+
+                    for path in pathContainer:
+                        # print(f'{path.head.value._label}->{path.tail.value._label}: cost={path.cost}')
+                        for v in path:
+                            print(v._label + '>', end='')
+                        print(path.cost)
+
+                else:
+                    print('No paths found')
 
             except UnboundLocalError as ule:
                 print(ule)
@@ -616,39 +646,32 @@ def runReportMode(exchangeInfo_filepath, trades_24hr_filepath):
     validTrades.loadEdgeAttributesFrom24hr(binanceData)
     print('DONE')
 
-    try:
-        candidateAssets = validTrades._vertices
-        candidateAssets.sortByAttribute(attribute='edgeCount', order='high')
+    candidateAssets = validTrades._vertices
+    candidateAssets.sortByAttribute(attribute='edgeCount', order='high')
 
-        print('Here are the top 5 assets for number of outward allowable trades:')
-        assetCount = 0
-        for asset in candidateAssets:
-            assetCount += 1
-            print(f'Asset: {asset._label}, Number of Edges: {asset.edgeCount}')
-            if assetCount >= 5:
-                break
-
-
-        candidateTrades = validTrades._edges
-        candidateTrades.sortByAttribute(attribute="volume24hr", order="high")
-        highestVolumeTrades = getFirstXElements(candidateTrades, 5)
-
-        print('Here are the top 5 trades by volume in the last 24hrs:')
-        for t in highestVolumeTrades:
-            print(t.value.fromVertex, t.value.toVertex, t.value.volume24hr)
-
-        candidateTrades.sortByAttribute(attribute="percentPriceChange24hr", order="high")
-        highestChangeTrades = getFirstXElements(candidateTrades, 5)
-
-        print('Here are the top 5 trades by percentage price change in the last 24hrs:')
-        for t in highestChangeTrades:
-            print(t.value.fromVertex, t.value.toVertex, t.value.percentPriceChange24hr)
+    print('Here are the top 5 assets for number of outward allowable trades:')
+    assetCount = 0
+    for asset in candidateAssets:
+        assetCount += 1
+        print(f'Asset: {asset._label}, Number of Edges: {asset.edgeCount}')
+        if assetCount >= 5:
+            break
 
 
+    candidateTrades = validTrades._edges
+    candidateTrades.sortByAttribute(attribute="volume24hr", order="high")
+    highestVolumeTrades = getFirstXElements(candidateTrades, 5)
 
-    except UnboundLocalError as ule:
-        print(ule)
-        print("Please run the 'Load data' option from the menu first.")
+    print('Here are the top 5 trades by volume in the last 24hrs:')
+    for t in highestVolumeTrades:
+        print(t.value.fromVertex, t.value.toVertex, t.value.volume24hr)
+
+    candidateTrades.sortByAttribute(attribute="percentPriceChange24hr", order="high")
+    highestChangeTrades = getFirstXElements(candidateTrades, 5)
+
+    print('Here are the top 5 trades by percentage price change in the last 24hrs:')
+    for t in highestChangeTrades:
+        print(t.value.fromVertex, t.value.toVertex, t.value.percentPriceChange24hr)
 
 
 
