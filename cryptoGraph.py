@@ -260,7 +260,7 @@ class TradePath(DSALinkedListDE):
             else:
                 fromLabel = toLabel
                 toLabel = i._label
-                # TODO next line may be inefficient... are we searching all edges in the graph, or is it targeted?
+
                 cost = float(tradeGraph.getEdgeValue(fromLabel, i._label))
                 if cost == 0.0:
                     raise ValueError('Be careful, no edge weight recorded for this trade')
