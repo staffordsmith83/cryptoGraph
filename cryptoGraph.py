@@ -62,19 +62,23 @@ class BinanceTradingData:
 
         try:
             oldPrice = float(tradeDetails['weightedAvgPrice'])
-            #TODO: deal with no internet connection in next line...
+
             updatedPrice = getCurrentSymbolPrice(symbol)
-            print(f'The latest price from the Binance API is: {updatedPrice}')
-            priceDifference = (updatedPrice - oldPrice) / oldPrice * 100
-            priceDifference = round(priceDifference, 2)
-            if priceDifference < 0:
-                print(
-                    f'The current price is approximately {-priceDifference}% less than the last 24hr weighted average.')
-            if priceDifference == 0:
-                print(f'The current price is equal to the past 24hr weighted average.')
-            if priceDifference > 0:
-                print(
-                    f'The current price is approximately {priceDifference}% more than the last 24hr weighted average.')
+            if updatedPrice is None:
+                print("Up to date price difference not calculated.")
+
+            else:
+                print(f'The latest price from the Binance API is: {updatedPrice}')
+                priceDifference = (updatedPrice - oldPrice) / oldPrice * 100
+                priceDifference = round(priceDifference, 2)
+                if priceDifference < 0:
+                    print(
+                        f'The current price is approximately {-priceDifference}% less than the last 24hr weighted average.')
+                if priceDifference == 0:
+                    print(f'The current price is equal to the past 24hr weighted average.')
+                if priceDifference > 0:
+                    print(
+                        f'The current price is approximately {priceDifference}% more than the last 24hr weighted average.')
 
         except ValueError as ve:
             print(ve)
@@ -284,15 +288,17 @@ def getCurrentSymbolPrice(symbol):
     baseUrl = 'https://api.binance.com/api/v3/ticker/price?symbol='
     requestUrl = baseUrl + symbol
     print("Making Web Request for Latest Price Info...")
+    try:
+        resp = requests.get(requestUrl)
+        if resp.status_code != 200:
+            # This means something went wrong.
+            raise ValueError
+        print("Latest Price Info Received from Binance API")
+        return float(resp.json()['price'])
 
-    resp = requests.get(requestUrl)
-    if resp.status_code != 200:
-        # This means something went wrong.
-        raise ValueError
-    print("Latest Price Info Received from Binance API")
-    return float(resp.json()['price'])
+    except requests.exceptions.RequestException as e:
 
-
+        print("Timed out or connection problem. You cannot get up to date price information at this time.")
 
 
 def getAllSymbolPrices():
@@ -310,7 +316,7 @@ def getAllSymbolPrices():
 
     except requests.exceptions.RequestException as e:
 
-        print("Timed out or connection problem. You cannot update the pices at this time.")
+        print("Timed out or connection problem. You cannot update the prices at this time.")
 
 
 def getFirstXElements(inList, x):
