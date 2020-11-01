@@ -1,6 +1,3 @@
-from copy import deepcopy  # TODO: reimplement to not use deepcopy
-
-
 ##########################################
 # CLASSES
 ##########################################
@@ -29,10 +26,10 @@ class DSAGraphVertex:
 
 
 class DSAGraphEdge:
-    """ Added v, p, and c default parameters, and added more attribtues to store trade information for Cryptograph.
+    """ Added v, p, and c default parameters, and added more attributes to store trade information for Cryptograph.
     self.weight stores the trade price."""
 
-    def __init__(self, fromVertex, toVertex, weight=0.0, v=None, c=None):
+    def __init__(self, fromVertex, toVertex, weight=None, v=None, c=None):
         self.fromVertex = fromVertex
         self.toVertex = toVertex
         self.weight = weight
@@ -74,7 +71,7 @@ class DSAGraphWithEdges:
 
         return result
 
-    def addEdge(self, label1, label2, weight=0.0):
+    def addEdge(self, label1, label2, weight=None):
         """Do not confuse with .addEdge() method of individual vertices.
         Non directional graph, label1 <--> label2"""
 
@@ -151,57 +148,6 @@ class DSAGraphWithEdges:
 
         return adjacency_list
 
-    # def getAdjacentEdges(self, label):
-    #     """This method added for my modiified DSAGraph implementation
-    #     to be used in the Cryptograph Application
-    #     Returns a linkedlist of DSAEdge objects"""
-    #     adjacent_edges_list = DSALinkedList()
-    #     vertex = self.getVertex(label)
-    #     if vertex is None:
-    #         raise ValueError(f'There is no vertex with label {label}')
-    #
-    #     else:
-    #         for e in self._edges:
-    #             if e.fromVertex == label:
-    #                 adjacent_edges_list.insertLast(e)
-    #
-    #     return adjacent_edges_list
-
-    # def isAdjacent(self, label1, label2):
-    #     """This is directional"""
-    #     result = False
-    #     try:
-    #         neighbours = self.getAdjacent(label1)
-    #         for v in neighbours:
-    #             if v._label == label2:
-    #                 result = True
-    #
-    #     except ValueError as ve:
-    #         print(ve)
-    #
-    #     return result
-
-    # def displayAsList(self):
-    #     for v in self._vertices:
-    #         print(f'{v._label}', end=", ")
-    #     print('\n')
-
-    # def displayAsMatrix(self):
-    #     """Not working... Stops printing the vertices after first one...had to use deepcopy...
-    #     Maybe a problem with the iterator implementation in my LinkedLists class?"""
-    #     vertices = deepcopy(self._vertices)
-    #     for v in vertices:
-    #         print(f'\n{v._label}:', end=" ")
-    #         adjList = self.getAdjacent(v._label)
-    #
-    #         for n in adjList:
-    #             print(f'{n._label}', end=", ")
-    #
-    #     print('\n')
-
-    # def displayEdges(self):
-    #     for e in self._edges:
-    #         print(f'{e.fromVertex} --> {e.toVertex}: {e.weight}')
 
 
 ##########################################
@@ -211,146 +157,21 @@ class DSAGraphWithEdges:
 class DSAListNode:
 
     def __init__(self, value):
-        """self.next should be the next DSAListNode object
+        """Building block for both linked list implementations in this module.
+        Based on code from my submission for DSA Practical 4 - Linked Lists.
+        self.next should be the next DSAListNode object
         in line in the list"""
         self.value = value
         self.next = None
         self.previous = None
 
 
-# class DSALinkedList:
-#
-#     def __init__(self):
-#         self.head = None
-#
-#     def insertFirst(self, newValue):
-#         newNd = DSAListNode(newValue)
-#
-#         if self.isEmpty():
-#             self.head = newNd
-#
-#         else:
-#             self.head.previous = newNd  # add a previous ref to the top node
-#             newNd.next = self.head  # add a next ref to our new node (not inserted yet)
-#             self.head = newNd  # then reassign head to be the new node (shuffles items down)
-#
-#     def insertLast(self, newValue):
-#         newNd = DSAListNode(newValue)
-#
-#         if self.isEmpty():
-#             self.head = newNd
-#
-#         else:
-#             currNd = self.head
-#             while currNd.next:  # check each item in list and set currNd to be the last node
-#                 currNd = currNd.next
-#
-#             # so we have traversed to the last node... what next?
-#
-#             currNd.next = newNd  # assign the currently last node to point to the new node next...
-#             newNd.previous = currNd  # assign the new node to point back to the currently last node.
-#             # newNd is now added to the end!
-#
-#     def isEmpty(self):
-#         return self.head is None
-#
-#     def peekFirst(self):
-#         if self.isEmpty():
-#             raise ValueError('List is empty')
-#         else:
-#             return self.head.value
-#
-#     def peekLast(self):
-#         if self.isEmpty():
-#             raise ValueError('List is empty')
-#         else:
-#             currNd = self.head
-#             while currNd.next:  # check each item in list and set currNd to be the last node
-#                 currNd = currNd.next
-#
-#             return currNd.value
-#
-#     def removeFirst(self):
-#         if self.isEmpty():
-#             raise ValueError('List is empty')
-#
-#         # check for one item list
-#         elif self.head is not None and self.head.next is None:
-#             nodeValue = self.head.value
-#             self.head = self.head.next  # in this case will set head to be None
-#
-#         else:  # multi item list
-#             nodeValue = self.head.value
-#             self.head = self.head.next
-#             self.head.previous = None  # remove the previous ref as our second node is now our head
-#
-#         return nodeValue
-#
-#     def removeLast(self):
-#         if self.isEmpty():
-#             raise ValueError('List is empty')
-#
-#         elif self.head.next is None:
-#             nodeValue = self.head.value
-#             self.head = None
-#
-#         else:
-#             prevNd = None
-#             currNd = self.head
-#
-#             while currNd.next is not None:
-#                 prevNd = currNd
-#                 currNd = currNd.next  # traverse to the second last node, to be able to drop its .next attribute
-#
-#             prevNd.next = None  # cut off the tail of the list
-#             nodeValue = currNd.value
-#
-#         return nodeValue
-#
-#     def contains(self, searchValue):
-#         """Added this method 10/10/2020, useful when using this data structure for other purposes e.g. cryptoGraph"""
-#
-#         for i in self:
-#             if i == searchValue:
-#                 return True
-#
-#         return False
-#
-#     def removeValue(self, value):
-#         """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS"""
-#         """Based on a method from https://www.pythoncentral.io/find-remove-node-linked-lists/"""
-#         prev = None
-#         curr = self.head
-#         while curr:
-#             if curr.value == value:
-#                 if prev:
-#                     prev.next = curr.next
-#                 else:
-#                     self.head = curr.next
-#                 return True
-#
-#             prev = curr
-#             curr = curr.next
-#
-#         return False
-#
-#     def __iter__(self):
-#
-#         self.cur = self.head
-#         return self
-#
-#     def __next__(self):
-#         curval = None
-#         if self.cur == None:
-#             raise StopIteration
-#         else:
-#             curval = self.cur.value
-#             self.cur = self.cur.next
-#         return curval
+
 
 
 class DSALinkedListDE:
-    """Doubly Ended linked list implementation. added another instance attribute self.tail.
+    """Doubly Ended linked list implementation, based on my submission for DSA Practical 4 - Linked Lists.
+    Added another instance attribute self.tail.
     Having this mens we never need to traverse through the list to find the end."""
 
     def __init__(self):
@@ -440,9 +261,9 @@ class DSALinkedListDE:
         return curval
 
     def removeValue(self, value):
-        """ NEW METHOD SINCE CREATING THIS CLASS FOR THE PRACS """
-        """Based on a method from https://www.pythoncentral.io/find-remove-node-linked-lists/"""
-        # TODO: get rid of multiple returns
+        """ NEW METHOD IMPLEMENTATION FOR Cryptograph.
+        Based on a method from https://www.pythoncentral.io/find-remove-node-linked-lists/"""
+
         prev = None
         curr = self.head
         while curr:

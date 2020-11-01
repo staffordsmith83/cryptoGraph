@@ -1,9 +1,3 @@
-###########################################
-# TODO: Deal with no internet connection situation, make sure can work without.
-# Find sepcific exceptions raised by te requests thing.
-
-
-
 ############################################
 # IMPORTS
 ############################################
@@ -15,6 +9,7 @@ import requests  # for web requests extended functionality only
 import sys
 import os
 import pickle
+from copy import deepcopy
 
 
 ############################################
@@ -44,6 +39,7 @@ class BinanceTradingData:
         information to the current trade price from the Binance API."""
 
         with open(self.trades_24hr_filepath) as json_file:
+
             trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
 
             tradeCount = 0
@@ -83,12 +79,10 @@ class BinanceTradingData:
         except ValueError as ve:
             print(ve)
 
-
-
     def getAssetTrades(self, assetName):
         """Takes an assetName, and iterates over the exchange Info file to get all the possible trades for that asset"""
         with open(self.exchangeInfo_filepath) as json_file:
-            ei = json.load(json_file)
+            ei = json.load(json_file)  # this is a DICTIONARY - allowed for reading in data
 
         assetPossibleTrades = SortableList()
         for symbol in ei['symbols']:
@@ -98,11 +92,10 @@ class BinanceTradingData:
 
         return assetPossibleTrades
 
-
     def createSkeletonGraph(self):
         """Creates a graph object from the trade data. Returns graph."""
         with open(self.exchangeInfo_filepath) as json_file:
-            ei = json.load(json_file)
+            ei = json.load(json_file)  # this is a DICTIONARY - allowed for reading in data
 
         validTrades = CryptoGraph()
         for symbol in ei['symbols']:
@@ -123,6 +116,7 @@ class CryptoGraph(DSAGraphWithEdges):
     """
 
     def loadEdgeAttributesFrom24hr(self, binanceDataObject):
+        """Adds volume24hr and percentPriceChange24hr to the edges of the cryptoGraph object"""
         with open(binanceDataObject.trades_24hr_filepath) as json_file:
             trades = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
 
@@ -130,20 +124,18 @@ class CryptoGraph(DSAGraphWithEdges):
                 for e in self._edges:
                     symbol = self.getVertex(e.fromVertex)._label + self.getVertex(e.toVertex)._label
 
-                    # for t in trades:
-                    #     if t['symbol'] == symbol:
-                    #         # e.weight = float(t['weightedAvgPrice']) # cost now taken from price.json
-                    #         e.volume24hr = float(t['volume'])
-                    #         e.percentPriceChange24hr = float(t['priceChangePercent'])
-
-                    # Replaced above with direct dictionary access to reduce complexity.
-
-
+                    for t in trades:
+                        if t['symbol'] == symbol:
+                            # e.weight = float(t['weightedAvgPrice']) # cost now taken from price.json
+                            e.volume24hr = float(t['volume'])
+                            e.percentPriceChange24hr = float(t['priceChangePercent'])
 
             except ValueError as ve:
                 print(ve)
 
     def loadCostFromLocalJson(self, binanceDataObject):
+        """Loads trade costs from a locally stored json file, in the same format that is returned from a call
+        to the Binance API at https://api.binance.com/api/v3/ticker/price"""
         with open(binanceDataObject.localPrices_filepath) as json_file:
             prices = json.load(json_file)  # trades is a list of dictionaries, one for each trading pair
 
@@ -161,10 +153,9 @@ class CryptoGraph(DSAGraphWithEdges):
             except ValueError as ve:
                 print(ve)
 
-
-
     def loadEdgeWeightsFromCurrent(self):
-
+        """Gets the costs for a single Trade, using a GET request
+        to the Binance API at https://api.binance.com/api/v3/ticker/price"""
         prices = getAllSymbolPrices()
 
         try:
@@ -185,6 +176,9 @@ class CryptoGraph(DSAGraphWithEdges):
             print(te)
 
     def getAllPaths(self, startNode, endNode):
+        """Wrapper for recursive method to perform graph traversal from startNode to endNode.
+        All possible direct and indirect paths are stored in a SortableList object and returned.
+        Heavily modified adaptation of graph traversal algorithms from my submission to DSA Practical 06 - Graphs"""
         path = TradePath()
         pathContainer = SortableList()
         try:
@@ -203,13 +197,14 @@ class CryptoGraph(DSAGraphWithEdges):
             print('At least one of those assets does not exist')
 
     def _getAllPathsRec(self, origin, destination, path, pathContainer):
+        """Heavily modified adaptation of graph traversal algorithms from my submission to DSA Practical 06 - Graphs"""
         origin.setVisited()
         path.insertLast(origin)
 
         if origin._label == destination._label:  # if we have got to the destination vertex
-            completePath = deepcopy(path)  # problem here with mutable path object! Using deepcopy but perhaps reimplement
+            completePath = deepcopy(path)  # problem here with mutable path object! Had to use deepcopy
             completePath.calculateTotalCost(self)
-            pathContainer.insertLast(completePath)  # add this complete path to the self.tempPaths attribute NOT WORKING
+            pathContainer.insertLast(completePath)
 
         else:
             for i in self.getAdjacent(origin._label):  # get adjacent takes the label
@@ -220,14 +215,15 @@ class CryptoGraph(DSAGraphWithEdges):
         path.removeLast()
         origin.clearVisited()
 
-
     def getEdgeValue(self, fromVertex, toVertex, attribute='weight'):
-
+        """Basic method to get weight property from a DSAGraphEdge object"""
         e = self.getEdge(fromVertex, toVertex)
         if attribute == 'weight':
             return e.weight
 
     def getTopFiveTradePathsByCost(self, fromAsset, toAsset):
+        """Wrapper method to perform graph traversal, sort results, and return top 5"""
+
         print('Please be patient, processing...')
         pathContainer = self.getAllPaths(fromAsset, toAsset)
         if pathContainer is not None:
@@ -238,21 +234,26 @@ class CryptoGraph(DSAGraphWithEdges):
         else:
             raise ValueError('No paths between these assets')
 
-
     def __repr__(self):
         return f'Cryptograph with {self.edgeCount} edges, and {self.verticesCount} vertices'
 
 
 class TradePath(DSALinkedListDE):
+    """ Inherits from DSALinkedListDE implementation, part of my submission for DSA Practical04 - Linked Lists.
+    Intended to use as a container to hold lists of connected vertices from graph traversal algorithms, and their
+    total costs"""
+
     def __init__(self):
         self.head = None
         self.tail = None  # added for doubly-ended implementation
         self.cost = 0
 
     def calculateTotalCost(self, tradeGraph):
-
+        """Given a TradePath object, calculate the overall exchange rate between the first and last asset,
+        including a commission that is applied for each trade equally. PLEASE NOTE the commission is applied at each
+        step, and may not truly reflect how this is applied in the real world. PLEASE REVIEW."""
         commission = 0.001
-        # pathstring = ''
+
         pathcost = 1
         fromLabel = None  # the first toLabel will be the label of the head
         toLabel = self.head.value._label
@@ -265,17 +266,19 @@ class TradePath(DSALinkedListDE):
                 fromLabel = toLabel
                 toLabel = i._label
 
-                cost = float(tradeGraph.getEdgeValue(fromLabel, i._label))
-                if cost == 0.0:
-                    raise ValueError('Be careful, no edge weight recorded for this trade')
+                try:
+                    cost = float(tradeGraph.getEdgeValue(fromLabel, i._label))
+                    pathcost = pathcost * cost
+                    pathcost = pathcost + pathcost * commission  # apply the commission to the cost
 
-                pathcost = pathcost * cost
-                pathcost = pathcost + pathcost * commission  # ignore commission for now
+                except ValueError as ve:
+                    print('Vertex does not exist' + str(ve))
+                except TypeError as te:
+                    print('This edge has no weight recorded.')
+
 
         # Now set the self.cost attribute to be our calculated total cost!
         self.cost = pathcost
-
-
 
 
 ############################################
@@ -294,7 +297,7 @@ def getCurrentSymbolPrice(symbol):
             # This means something went wrong.
             raise ValueError
         print("Latest Price Info Received from Binance API")
-        return float(resp.json()['price'])
+        return float(resp.json()['price'])  # this is accessing a DICTIONARY - allowed for reading in data
 
     except requests.exceptions.RequestException as e:
 
@@ -312,7 +315,7 @@ def getAllSymbolPrices():
             # This means something went wrong.
             raise ValueError
         print("Latest Price Info Received from Binance API")
-        return resp.json()
+        return resp.json()  # this is returning a DICTIONARY - allowed for reading in data
 
     except requests.exceptions.RequestException as e:
 
@@ -320,27 +323,18 @@ def getAllSymbolPrices():
 
 
 def getFirstXElements(inList, x):
+    """Takes a linked list object returns a new list with the first x elements"""
     outList = SortableList()
     currNode = inList.head
     for i in range(x):
-        currNode = _getFirstXElementsRec(currNode, outList)
+        outList.insertLast(currNode)
+        currNode = currNode.next
 
     return outList
 
 
-def _getFirstXElementsRec(currNode, outList):
-    outList.insertLast(currNode)
-    currNode = currNode.next
-
-    return currNode
-
-
-def loadData(binanceDataObject):
-    validTrades = binanceDataObject.createSkeletonGraph()
-    validTrades.loadEdgeAttributesFrom24hr(binanceDataObject)
-
-
 def serialize(path, myObject):
+    """Takes a filepath string and an object and serialises the object to a file at that path"""
     print("Saving Object to File...")
     try:
         with open(path, "wb") as dataFile:
@@ -350,6 +344,7 @@ def serialize(path, myObject):
 
 
 def deserialize(path):
+    """Reads in a serialised file from user specified path. Returns the object."""
     print("Reading Object from File...")
     try:
         with open(path, "rb") as dataFile:
@@ -373,6 +368,9 @@ def displayUsage():
 
 
 def runInteractiveMenu(binanceData=None):
+    """The menu for the interactive mode. A substantial amount of the cryptoGraph program logic is
+    included in this function."""
+
     user_choice = '0'
     while not user_choice == '13':
         print('\n\nINTERACTIVE MODE MENU')
@@ -416,7 +414,7 @@ def runInteractiveMenu(binanceData=None):
             print('DONE')
 
         #######################################
-        # TODO: make this step able to be run using a dummy price.json file
+
         elif user_choice == '2':
             try:
                 validTrades.loadEdgeWeightsFromCurrent()
@@ -537,8 +535,7 @@ def runInteractiveMenu(binanceData=None):
         #######################################
 
         elif user_choice == '9':
-            # TODO: put the following in a function that the choice calls
-            """Trade overview, lists:
+            """Trade overview, list:
             The top 10 highest volume of trades for last 24hrs,
             The top 10 highest avg weighted price for the last 24hrs.
             The top 10 highest for price change over last 24hrs
@@ -581,7 +578,7 @@ def runInteractiveMenu(binanceData=None):
                 # Check if the first trade path is the direct path
                 # by checking if the second asset in the path has the toAsset name
                 if topFiveByCost.head.value.value.head.next.value._label != toAsset:
-                    print('Profitable non-direct trade path detected!!!!!!!!!!!!!!')
+                    print('Best value trade path is not a direct trade! Investigate further...')
                     for path in topFiveByCost:
                         for v in path.value:
                             print(v._label + '>', end='')
@@ -629,6 +626,9 @@ def runInteractiveMenu(binanceData=None):
         elif user_choice == '13':
 
             print("Ending Session")
+            # Do cleanup
+            os.remove(graph_outFilename)
+            sys.setrecursionlimit(1500)
 
             sys.exit()
 
@@ -641,7 +641,6 @@ def runInteractiveMenu(binanceData=None):
 def runReportMode(exchangeInfo_filepath, trades_24hr_filepath):
     """Takes two commandline arguments <asset_file> and <trade_file>.
     Then runs statistics on the dataset and outputs."""
-
 
     print('Loading Binance trading data from file')
     binanceData = BinanceTradingData(trades_24hr_filepath, exchangeInfo_filepath)
@@ -663,7 +662,6 @@ def runReportMode(exchangeInfo_filepath, trades_24hr_filepath):
         if assetCount >= 5:
             break
 
-
     candidateTrades = validTrades._edges
     candidateTrades.sortByAttribute(attribute="volume24hr", order="high")
     highestVolumeTrades = getFirstXElements(candidateTrades, 5)
@@ -680,17 +678,15 @@ def runReportMode(exchangeInfo_filepath, trades_24hr_filepath):
         print(t.value.fromVertex, t.value.toVertex, t.value.percentPriceChange24hr)
 
 
-
-
-
 ############################################
 # MAIN FUNCTION
 ############################################
 
 
 def main():
+    """Handle commandline arguments, and call interactive mode or report mode as appropriate"""
     # Up the recursion limit
-    sys.setrecursionlimit(10000)
+    sys.setrecursionlimit(10000)  # this is necessary for serialisation
 
     # Handle commandline arguments
 
