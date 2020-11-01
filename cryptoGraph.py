@@ -3,7 +3,6 @@
 ############################################
 
 from dataStructures import *
-
 import json
 import requests  # for web requests extended functionality only
 import sys
@@ -389,7 +388,7 @@ def runInteractiveMenu(binanceData=None):
         print('13. Exit')
 
         user_choice = input('Please make a user_choice: ')
-        #######################################
+        ###################################################################################################
         if user_choice == '1':
 
             # TODO LAST BEFORE SUBMIT: use user input lines instead of predetermined paths
@@ -413,7 +412,7 @@ def runInteractiveMenu(binanceData=None):
             validTrades.loadCostFromLocalJson(binanceData)
             print('DONE')
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '2':
             try:
@@ -426,7 +425,7 @@ def runInteractiveMenu(binanceData=None):
             except ConnectionError as ce:
                 print('Could not connect to internet' + str(ce))
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '3':
             assetCode = input('Specify the asset code:')
@@ -440,7 +439,7 @@ def runInteractiveMenu(binanceData=None):
                 print(ule)
                 print("Please run the 'Load data' option from the menu first.")
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '4':
             fromAsset = input('Please specify the From Asset for your trade pair:')
@@ -452,7 +451,7 @@ def runInteractiveMenu(binanceData=None):
             except IndexError as ie:
                 print(ie)
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '5':
             fromAsset = input('Please specify the From Asset for your trade path:')
@@ -474,7 +473,7 @@ def runInteractiveMenu(binanceData=None):
                 print(ule)
                 print("Please run the 'Load data' option from the menu first.")
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '6':
             fromAsset = input('Please specify the From Asset for your trade path:')
@@ -494,7 +493,7 @@ def runInteractiveMenu(binanceData=None):
                 print("Please run the 'Load data' option from the menu first.")
 
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '7':
             # Do not build valid trades everytime, or we lose previous exclusions!
@@ -509,7 +508,7 @@ def runInteractiveMenu(binanceData=None):
                     print(f'Asset {excludeAsset} removed from the Graph')
 
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '8':
             """Asset Overview, we do not have very much information, 
@@ -532,7 +531,7 @@ def runInteractiveMenu(binanceData=None):
                 print(ule)
                 print("Please run the 'Load data' option from the menu first.")
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '9':
             """Trade overview, list:
@@ -560,7 +559,7 @@ def runInteractiveMenu(binanceData=None):
                 print(t.value.fromVertex, t.value.toVertex, t.value.percentPriceChange24hr)
 
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '10':
             """Please note, this choice could be further developed by checking all trade pairs
@@ -597,7 +596,7 @@ def runInteractiveMenu(binanceData=None):
 
 
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '11':
             """Save the trade graph by serialisation. Also save the binance data object?"""
@@ -609,7 +608,7 @@ def runInteractiveMenu(binanceData=None):
 
             ...
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '12':
 
@@ -621,7 +620,7 @@ def runInteractiveMenu(binanceData=None):
                 print('Please ensure there is a saved trade graph to reload...')
 
 
-        #######################################
+        ###################################################################################################
 
         elif user_choice == '13':
 
@@ -632,7 +631,7 @@ def runInteractiveMenu(binanceData=None):
 
             sys.exit()
 
-        #######################################
+        ###################################################################################################
 
         else:
             print('I dont understand your user_choice.')

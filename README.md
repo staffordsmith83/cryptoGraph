@@ -19,10 +19,12 @@ _______________________________
 
     5   .gitignore - for obvious reasons.
 
-    6   binance_json/24hr.json - a data file containing 
+    6   24hr.json - a data file containing 
     
-    7   binance_json/exchangeInfo.json
+    7   exchangeInfo.json - returned from BinanceAPI
 
-    8   Report.pdf
+    8   price.json - returned from BinanceAPI
+    
+    8   Report.pdf - The software design document and discussion of complexity
 
     9   Coversheet.pdf
